@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/UDOOBluLib.iml" filepath="$PROJECT_DIR$/UDOOBluLib.iml" />
+      <module fileurl="file://$PROJECT_DIR$/bluGloveCarExample/bluGloveCar.iml" filepath="$PROJECT_DIR$/bluGloveCarExample/bluGloveCar.iml" />
+      <module fileurl="file://$PROJECT_DIR$/udooblulib/udooblulib.iml" filepath="$PROJECT_DIR$/udooblulib/udooblulib.iml" />
+    </modules>
+  </component>
+</project>
