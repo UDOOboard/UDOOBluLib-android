@@ -81,4 +81,12 @@ public class Point3D {
   public double getModule(){
 	  return Math.sqrt(x*x + y*y + z*z);
   }
+
+  public float[] toFloatArray(){
+    float[] values = new float[3];
+    values[0] =(float) x;
+    values[1] =(float) y;
+    values[2] =(float) z;
+    return values;
+  }
 }

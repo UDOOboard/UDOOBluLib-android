@@ -13,6 +13,17 @@ public class BitUtility {
         return (byte) (((high ? 1 : 0) << pos) & 0xff);
     }
 
+
+    public static byte setValuesPosByte(boolean high, int ... positon) {
+        byte out = 0;
+        if (positon.length == 0 && high) out = (byte) 0xff;
+        else for (int i = 0; i < positon.length; i++) {
+            int pos = positon[i];
+            out = (byte) (out | pos);
+        }
+        return out;
+    }
+
     public static byte setValuePosByte(boolean high, int pos, byte oldValue) {
         if (pos > 8) return 0;
         return (byte) ((((high ? 1 : 0) << pos) & 0xff) | oldValue);

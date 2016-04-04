@@ -9,7 +9,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -17,6 +19,7 @@ import org.udoo.udooblulib.BuildConfig;
 import org.udoo.udooblulib.interfaces.IBleDeviceListener;
 import org.udoo.udooblulib.interfaces.OnCharacteristicsListener;
 import org.udoo.udooblulib.model.CharacteristicModel;
+import org.udoo.udooblulib.scan.BluScanCallBack;
 import org.udoo.udooblulib.sensor.Constant;
 import org.udoo.udooblulib.sensor.Constant.IOPIN;
 import org.udoo.udooblulib.sensor.Constant.IOPIN_MODE;
@@ -36,12 +39,14 @@ import java.util.UUID;
  * Created by harlem88 on 24/03/16.
  */
 
-
 public class UdooBluManager {
     private boolean mBound;
     private UdooBluService mUdooBluService;
     private HashMap<String, IBleDeviceListener> mDeviceListenerMap;
     private HashMap<String, OnCharacteristicsListener> mOnCharacteristicsListenerMap;
+
+    private Handler mHandler;
+    private boolean mScanning;
 
     public UdooBluManager(Context context) {
         init(context);
@@ -52,6 +57,8 @@ public class UdooBluManager {
         mOnCharacteristicsListenerMap = new HashMap<>();
         context.bindService(new Intent(context, UdooBluService.class), mConnection, Context.BIND_AUTO_CREATE);
         context.registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
+        mHandler = new Handler(Looper.getMainLooper());
+
     }
 
     private String TAG = "BluManager";
@@ -72,6 +79,11 @@ public class UdooBluManager {
             mBound = false;
         }
     };
+
+    public boolean scanLeDevice(boolean enable, BluScanCallBack scanCallback){
+        return mUdooBluService.scanLeDevice(enable, scanCallback);
+    }
+
 
     public void connect(String address, IBleDeviceListener iBleDeviceListener) {
         mDeviceListenerMap.put(address, iBleDeviceListener);
@@ -182,8 +194,9 @@ public class UdooBluManager {
                         if (BuildConfig.DEBUG)
                             Log.e(TAG, "setIoPinMode: " + e.getMessage());
                     }
-                    BitUtility.LogBinValue(msg, false);
 
+                    if (BuildConfig.DEBUG)
+                        BitUtility.LogBinValue(msg, false);
                 }
             }
         }
@@ -192,32 +205,41 @@ public class UdooBluManager {
     }
 
 
-    public boolean digitalWrite(String address, IOPIN iopin, IOPIN_VALUE iopin_value) {
-        boolean success = false;
-        byte bPos = getBytePos(iopin_value == IOPIN_VALUE.HIGH, iopin);
-        byte[] msg;
-        UUID service = UDOOBLE.UUID_IOPIN_SERV, characteristic;
-        characteristic = UDOOBLE.UUID_IOPIN_DIGITAL_DATA;
-        msg = new byte[1];
-        msg[0] = bPos;
-        BluetoothGattService serv = mUdooBluService.getService(address, service);
-        if (serv != null) {
-            BluetoothGattCharacteristic charac = serv.getCharacteristic(characteristic);
-            try {
-                mUdooBluService.writeCharacteristic(address, charac, msg, new Observer() {
-                    @Override
-                    public void update(Observable observable, Object data) {
-                        //TODO
-                    }
-                });
-                success = true;
-            } catch (InterruptedException e) {
-                if (BuildConfig.DEBUG)
-                    Log.e(TAG, "digitalWrite: " + e.getMessage());
+    public boolean digitalWrite(String address, IOPIN_VALUE iopin_value, IOPIN iopin) {
+        return digitalWrite(address, getBytePos(iopin_value == IOPIN_VALUE.HIGH, iopin));
+    }
+
+    private boolean digitalWrite(String address, byte value){
+            boolean success = false;
+            byte[] msg;
+            UUID service = UDOOBLE.UUID_IOPIN_SERV, characteristic;
+            characteristic = UDOOBLE.UUID_IOPIN_DIGITAL_DATA;
+            msg = new byte[1];
+            msg[0] = value;
+            BluetoothGattService serv = mUdooBluService.getService(address, service);
+            if (serv != null) {
+                BluetoothGattCharacteristic charac = serv.getCharacteristic(characteristic);
+                try {
+                    mUdooBluService.writeCharacteristic(address, charac, msg, new Observer() {
+                        @Override
+                        public void update(Observable observable, Object data) {
+                            //TODO
+                        }
+                    });
+                    success = true;
+                } catch (InterruptedException e) {
+                    if (BuildConfig.DEBUG)
+                        Log.e(TAG, "digitalWrite: " + e.getMessage());
+                }
+                BitUtility.LogBinValue(msg, false);
             }
-            BitUtility.LogBinValue(msg, false);
-        }
-        return success;
+            return success;
+
+    }
+
+    public boolean digitalWrite(String address, IOPIN_VALUE iopin_value, IOPIN... iopins) {
+        byte bPos = getByteMorePos(iopin_value == IOPIN_VALUE.HIGH, iopins);
+        return digitalWrite(address, bPos);
     }
 
     public byte[] digitalRead(String address, IOPIN iopin) {
@@ -259,6 +281,34 @@ public class UdooBluManager {
         return success;
     }
 
+    public boolean turnLed(String address, int color, byte func, int millis) {
+        BluetoothGattService serv;
+        BluetoothGattCharacteristic charac = null;
+        boolean succendSend = false;
+        serv = mUdooBluService.getService(address, UDOOBLE.UUID_LED_SERV);
+        if (serv != null) {
+            switch (color) {
+                case Constant.GREEN_LED:
+                    charac = serv.getCharacteristic(UDOOBLE.UUID_LED_GREEN);
+                    break;
+                case Constant.YELLOW_LED:
+                    charac = serv.getCharacteristic(UDOOBLE.UUID_LED_YELLOW);
+                    break;
+                case Constant.RED_LED:
+                    charac = serv.getCharacteristic(UDOOBLE.UUID_LED_RED);
+                    break;
+            }
+            byte[] msg = new byte[2];
+            msg[0] = func;
+            msg[1] = (byte) 0x03;
+            succendSend = mUdooBluService.writeCharacteristic(address, charac, msg);
+            mUdooBluService.waitIdle(Constant.GATT_TIMEOUT);
+        } else {
+            //TODO service not found
+        }
+        return succendSend;
+    }
+
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -267,8 +317,6 @@ public class UdooBluManager {
             byte[] value = intent.getByteArrayExtra(UdooBluService.EXTRA_DATA);
             String uuidStr = intent.getStringExtra(UdooBluService.EXTRA_UUID);
             String address = intent.getStringExtra(UdooBluService.EXTRA_ADDRESS);
-
-            CharacteristicModel characteristicModel = CharacteristicModel.Builder(action, uuidStr, value, status);
 
             if (UdooBluService.ACTION_GATT_CONNECTED.equals(action)) {
                 if (mDeviceListenerMap.containsKey(address)) {
@@ -323,32 +371,44 @@ public class UdooBluManager {
     }
 
     private byte getBytePos(boolean high, IOPIN iopin) {
-        byte value = -1;
+        return BitUtility.setOnlyValuePosByte(high, getPinIntPos(iopin));
+    }
+
+    private byte getByteMorePos(boolean high, IOPIN... iopins){
+        int values [] = new int[iopins.length];
+        for (int i = 0; i<iopins.length; i++){
+            values[i] = getPinIntPos(iopins[i]);
+        }
+        return BitUtility.setValuesPosByte(high, values);
+    }
+
+    private int getPinIntPos(IOPIN iopin) {
+        int value = -1;
 
         switch (iopin) {
             case A0:
-                value = BitUtility.setOnlyValuePosByte(high, 0);
+                value = 1;
                 break;
             case A1:
-                value = BitUtility.setOnlyValuePosByte(high, 1);
+                value = 2;
                 break;
             case A2:
-                value = BitUtility.setOnlyValuePosByte(high, 2);
+                value = 4;
                 break;
             case A3:
-                value = BitUtility.setOnlyValuePosByte(high, 3);
+                value = 8;
                 break;
             case A4:
-                value = BitUtility.setOnlyValuePosByte(high, 4);
+                value = 16;
                 break;
             case A5:
-                value = BitUtility.setOnlyValuePosByte(high, 5);
+                value = 32;
                 break;
             case D6:
-                value = BitUtility.setOnlyValuePosByte(high, 6);
+                value = 64;
                 break;
             case D7:
-                value = BitUtility.setOnlyValuePosByte(high, 7);
+                value = 128;
                 break;
         }
 
