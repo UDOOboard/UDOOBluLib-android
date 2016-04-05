@@ -69,8 +69,6 @@ Library for control Udoo Blu board
                                 @Override
                                 public void onCharacteristicChanged(String uuidStr, byte[] rawValue) {
                                     Point3D point3D = UDOOBLESensor.ACCELEROMETER.convert(rawValue);
-                                    if (point3D != null)
-                                        subscriber.onNext(point3D.toFloatArray());
                                 }
                             });
                             
