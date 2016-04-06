@@ -87,9 +87,9 @@ public enum UDOOBLESensor {
     @Override
     public Point3D convert(final byte [] value) {
       // Multiply x and y with -1 so that the values correspond with the image in the app
-      float x = (float) ((short) ((value[0] << 8) | (value[1] & 0xff))) / 6842;
-	  float y = (float) ((short) ((value[2] << 8) | (value[3] & 0xff))) / 6842;
-	  float z = (float) ((short) ((value[4] << 8) | (value[5] & 0xff))) / 6842;
+      float x = (float) ((short) ((value[1] << 8) | (value[0] & 0xff))) / 6842;
+	  float y = (float) ((short) ((value[3] << 8) | (value[2] & 0xff))) / 6842;
+	  float z = (float) ((short) ((value[5] << 8) | (value[4] & 0xff))) / 6842;
 
 	  return new Point3D(x , y , z);
     }
