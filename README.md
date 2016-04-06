@@ -1,13 +1,13 @@
 # UDOOBluLib
 
-Library for control Udoo Blu board (bluetooth low energy)
-(http://http://www.udoo.org/wp-content/uploads/2014/12/logoogo.png)
+![alt tag](http://www.udoo.org/wp-content/uploads/2014/12/logoogo.png)
+
+Library for Udoo Blu board 
 
 # Usage
 
-*For a working implementation of this project see the `example/`.*
-
   1. Include the library as local library project or add the dependency in your build.gradle.
+        
         repositories {
             maven {
                 url  "http://dl.bintray.com/harlem88/maven"
@@ -52,12 +52,12 @@ Library for control Udoo Blu board (bluetooth low energy)
                         }
                     });
 
-  4. Enable notification
+  4. Enable notifications
 
             udooBluManager.enableSensor(address1, UDOOBLESensor.ACCELEROMETER, true);
             udooBluManager.setNotificationPeriod(address1, UDOOBLESensor.ACCELEROMETER);
 
-  5. Listen notification
+  5. Listen notifications
 
             udooBluManager.enableNotification(address1, true, UDOOBLESensor.ACCELEROMETER, new OnCharacteristicsListener() {
                                 @Override
@@ -71,3 +71,6 @@ Library for control Udoo Blu board (bluetooth low energy)
                                         subscriber.onNext(point3D.toFloatArray());
                                 }
                             });
+  6. Digital write
+            
+            mUdooBluManager.digitalWrite(address1, IOPIN_VALUE.HIGH, IOPIN.D6);
