@@ -166,7 +166,7 @@ public class UdooBluManager {
             if (iopin_type == IOPIN_TYPE.ANALOG && iopin_mode == IOPIN_MODE.INPUT && iopin != IOPIN.D6 && iopin != IOPIN.D7) {
                 service = UDOOBLE.UUID_IOPIN_SERV;
                 characteristic = UDOOBLE.UUID_IOPIN_ANALOG_CONF;
-                byte bPos = getBytePos(true, iopin);
+                byte bPos = getByteMorePos(true, iopin);
                 msg = new byte[2];
                 msg[0] = 0;
                 msg[1] = bPos;
@@ -175,35 +175,47 @@ public class UdooBluManager {
                 service = UDOOBLE.UUID_IOPIN_SERV;
                 characteristic = UDOOBLE.UUID_IOPIN_DIGITAL_CONF;
                 msg = new byte[1];
-                msg[0] = getBytePos(iopin_mode == IOPIN_MODE.INPUT, iopin);
+                msg[0] = getByteMorePos(iopin_mode == IOPIN_MODE.INPUT, iopin);
             }
 
             if (msg != null) {
                 BluetoothGattService serv = mUdooBluService.getService(address, service);
                 if (serv != null) {
                     BluetoothGattCharacteristic charac = serv.getCharacteristic(characteristic);
-                    try {
-                        mUdooBluService.writeCharacteristic(address, charac, msg, new Observer() {
-                            @Override
-                            public void update(Observable observable, Object data) {
-                                //TODO
-                            }
-                        });
-                        success = true;
-                    } catch (InterruptedException e) {
-                        if (BuildConfig.DEBUG)
-                            Log.e(TAG, "setIoPinMode: " + e.getMessage());
-                    }
-
-                    if (BuildConfig.DEBUG)
-                        BitUtility.LogBinValue(msg, false);
+                    mUdooBluService.writeCharacteristic(address, charac, msg);
+                    mUdooBluService.waitIdle(Constant.GATT_TIMEOUT);
+                    success = true;
                 }
+
+                if (BuildConfig.DEBUG)
+                    BitUtility.LogBinValue(msg, false);
             }
         }
         return success;
-
     }
 
+
+    public boolean digitalRead(final String address, OnCharacteristicsListener onCharacteristicsListener) {
+
+        boolean success = false;
+        UUID servUuid = UDOOBLE.UUID_IOPIN_SERV;
+        UUID dataUuid = UDOOBLE.UUID_IOPIN_DIGITAL_DATA;
+
+        BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
+
+        if (serv != null) {
+            BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
+            success = mUdooBluService.readCharacteristic(address, charac);
+            if (success) {
+                mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
+            }else
+                Log.i(TAG, "error on set property for this CharacteristicModel");
+        } else {
+            Log.i(TAG, "error not service for this CharacteristicModel");
+        }
+
+        return success;
+    }
 
     public boolean digitalWrite(String address, IOPIN_VALUE iopin_value, IOPIN iopin) {
         return digitalWrite(address, getBytePos(iopin_value == IOPIN_VALUE.HIGH, iopin));

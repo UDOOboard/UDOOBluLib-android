@@ -13,7 +13,7 @@ ext {
     siteUrl = 'https://github.com/harlem88/UDOOBluLib'
     gitUrl = 'https://github.com/harlem88/UDOOBluLib.git'
 
-    libraryVersion = '0.1'
+    libraryVersion = '0.1.1'
 
     developerId = 'harlem88'
     developerName = 'Antonio Gisondi'
