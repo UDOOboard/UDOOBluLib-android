@@ -19,8 +19,14 @@ Library for Udoo Blu board
         dependencies {
             compile 'org.udoo:udooblulib:0.1'
         }
+      
+  2. Add in your `AndroidManifest.xml` UdooBluService class
+        
+            <service
+              android:name="org.udoo.udooblulib.service.UdooBluService"
+              android:exported="false" />
 
-  2. In your `onCreate` method in Application class, bind the `UdooBluManager`.
+  3. In your `onCreate` method in Application class, bind the `UdooBluManager`.
 
              @Override
              public void onCreate() {
@@ -33,7 +39,7 @@ Library for Udoo Blu board
                  return mUdooBluManager;
              }
 
-  3. Connect ble device:
+  4. Connect ble device:
 
             mUdooBluManager.connect(address1, new IBleDeviceListener() {
                         @Override
@@ -52,12 +58,12 @@ Library for Udoo Blu board
                         }
                     });
 
-  4. Enable notifications
+  5. Enable notifications
 
             udooBluManager.enableSensor(address1, UDOOBLESensor.ACCELEROMETER, true);
             udooBluManager.setNotificationPeriod(address1, UDOOBLESensor.ACCELEROMETER);
 
-  5. Listen notifications
+  6. Listen notifications
 
             udooBluManager.enableNotification(address1, true, UDOOBLESensor.ACCELEROMETER, new OnCharacteristicsListener() {
                                 @Override
@@ -71,6 +77,6 @@ Library for Udoo Blu board
                                         subscriber.onNext(point3D.toFloatArray());
                                 }
                             });
-  6. Digital write
+  7. Digital write
             
             mUdooBluManager.digitalWrite(address1, IOPIN_VALUE.HIGH, IOPIN.D6);
