@@ -259,37 +259,24 @@ public class UdooBluManager {
         return value;
     }
 
-    public boolean analogRead(final String address, IOPIN iopin) {
+    public boolean readAnalog(final String address, OnCharacteristicsListener onCharacteristicsListener) {
         boolean success = false;
-        UUID service = UDOOBLE.UUID_IOPIN_SERV, characteristic;
-        characteristic = UDOOBLE.UUID_IOPIN_ANALOG_CONF;
-        byte bPos = getBytePos(true, iopin);
-        byte[] msg;
-        msg = new byte[2];
-        msg[0] = bPos;
-        msg[1] = bPos;
-        BluetoothGattService serv = mUdooBluService.getService(address, service);
-        if (serv != null) {
-            final BluetoothGattCharacteristic charac = serv.getCharacteristic(characteristic);
+        UUID servUuid = UDOOBLE.UUID_IOPIN_SERV;
+        UUID dataUuid = UDOOBLE.UUID_IOPIN_ANALOG_READ;
 
-            try {
-                mUdooBluService.writeCharacteristic(address, charac, msg, new Observer() {
-                    @Override
-                    public void update(Observable observable, Object data) {
-                        try {
-                            mUdooBluService.readCharacteristic(address, charac, null);
-                        } catch (InterruptedException e) {
-                            if (BuildConfig.DEBUG)
-                                Log.e(TAG, "digitalWrite: " + e.getMessage());
-                        }
-                    }
-                });
-                success = true;
-            } catch (InterruptedException e) {
-                if (BuildConfig.DEBUG)
-                    Log.e(TAG, "digitalWrite: " + e.getMessage());
-            }
+        BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
+
+        if (serv != null) {
+            BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
+            success = mUdooBluService.readCharacteristic(address, charac);
+            if (success) {
+                mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
+            } else
+                Log.i(TAG, "error on set property for this CharacteristicModel");
+        } else {
+            Log.i(TAG, "error not service for this CharacteristicModel");
         }
+
         return success;
     }
 
