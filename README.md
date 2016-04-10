@@ -17,7 +17,7 @@ Library for Udoo Blu board
         ...
 
         dependencies {
-            compile 'org.udoo:udooblulib:0.1'
+            compile 'org.udoo:udooblulib:0.1.2'
         }
       
   2. Add in your `AndroidManifest.xml` UdooBluService class
