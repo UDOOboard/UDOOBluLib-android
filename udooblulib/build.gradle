@@ -13,7 +13,7 @@ ext {
     siteUrl = 'https://github.com/harlem88/UDOOBluLib'
     gitUrl = 'https://github.com/harlem88/UDOOBluLib.git'
 
-    libraryVersion = '0.1.1'
+    libraryVersion = '0.1.2'
 
     developerId = 'harlem88'
     developerName = 'Antonio Gisondi'
@@ -33,7 +33,7 @@ android {
         minSdkVersion 21
         targetSdkVersion 23
         versionCode 1
-        versionName '0.1'
+        versionName '0.1.2'
     }
     buildTypes {
         release {
