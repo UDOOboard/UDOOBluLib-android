@@ -1,5 +1,6 @@
 package org.udoo.udooblulib.manager;
 
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
@@ -18,7 +19,6 @@ import android.widget.Toast;
 import org.udoo.udooblulib.BuildConfig;
 import org.udoo.udooblulib.interfaces.IBleDeviceListener;
 import org.udoo.udooblulib.interfaces.OnCharacteristicsListener;
-import org.udoo.udooblulib.model.CharacteristicModel;
 import org.udoo.udooblulib.scan.BluScanCallBack;
 import org.udoo.udooblulib.sensor.Constant;
 import org.udoo.udooblulib.sensor.Constant.IOPIN;
@@ -44,9 +44,15 @@ public class UdooBluManager {
     private UdooBluService mUdooBluService;
     private HashMap<String, IBleDeviceListener> mDeviceListenerMap;
     private HashMap<String, OnCharacteristicsListener> mOnCharacteristicsListenerMap;
-
+    private boolean isBluManagerReady;
     private Handler mHandler;
     private boolean mScanning;
+    private String TAG = "BluManager";
+    private IBluManagerCallback mIBluManagerCallback;
+
+    public interface IBluManagerCallback{
+        void onBluManagerReady();
+    }
 
     public UdooBluManager(Context context) {
         init(context);
@@ -57,11 +63,15 @@ public class UdooBluManager {
         mOnCharacteristicsListenerMap = new HashMap<>();
         context.bindService(new Intent(context, UdooBluService.class), mConnection, Context.BIND_AUTO_CREATE);
         context.registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
+        context.registerReceiver(mGattBoundReceiver, new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED));
         mHandler = new Handler(Looper.getMainLooper());
 
     }
 
-    private String TAG = "BluManager";
+    public void setIBluManagerCallback(IBluManagerCallback iBluManagerCallback){
+        mIBluManagerCallback = iBluManagerCallback;
+    }
+
     private ServiceConnection mConnection = new ServiceConnection() {
 
         @Override
@@ -69,9 +79,16 @@ public class UdooBluManager {
             UdooBluService.LocalBinder binder = (UdooBluService.LocalBinder) service;
             mUdooBluService = binder.getService();
             mBound = true;
-            mUdooBluService.initialize();
-            //mUdooBluService.connect(address);
-            Log.i(TAG, "service ok");
+            if(mUdooBluService.initialize()){
+                isBluManagerReady = true;
+                if(mIBluManagerCallback != null)
+                    mIBluManagerCallback.onBluManagerReady();
+            }{
+                isBluManagerReady = false;
+            }
+
+            if(BuildConfig.DEBUG)
+                Log.i(TAG, "connected to udooBluService");
         }
 
         @Override
@@ -80,55 +97,82 @@ public class UdooBluManager {
         }
     };
 
-    public boolean scanLeDevice(boolean enable, BluScanCallBack scanCallback){
-        return mUdooBluService.scanLeDevice(enable, scanCallback);
+    public boolean scanLeDevice(boolean enable, BluScanCallBack scanCallback) {
+        boolean success = false;
+        if (isBluManagerReady) {
+            success = mUdooBluService.scanLeDevice(enable, scanCallback);
+        } else if (BuildConfig.DEBUG)
+            Log.i(TAG, "BluManager not ready");
+
+        return success;
     }
 
-
     public void connect(String address, IBleDeviceListener iBleDeviceListener) {
-        mDeviceListenerMap.put(address, iBleDeviceListener);
-        mUdooBluService.connect(address);
+        if (isBluManagerReady) {
+            mDeviceListenerMap.put(address, iBleDeviceListener);
+            mUdooBluService.connect(address);
+        }else if (BuildConfig.DEBUG)
+            Log.i(TAG, "BluManager not ready");
+
+    }
+
+    public String connects(IBleDeviceListener iBleDeviceListener) {
+        String address = "";
+        if (isBluManagerReady) {
+            address = mUdooBluService.connectWithBounded();
+            if (address != null && address.length() > 0)
+                mDeviceListenerMap.put(address, iBleDeviceListener);
+        } else if (BuildConfig.DEBUG)
+            Log.i(TAG, "BluManager not ready");
+        return address;
     }
 
     public boolean enableSensor(String address, UDOOBLESensor sensor, boolean enable) {
         boolean success = false;
-        if (sensor != null) {
-            UUID servUuid = sensor.getService();
-            UUID confUuid = sensor.getConfig();
-            BluetoothGattService serv = null;
-            BluetoothGattCharacteristic charac = null;
+        if (isBluManagerReady) {
+            if (sensor != null) {
+                UUID servUuid = sensor.getService();
+                UUID confUuid = sensor.getConfig();
+                BluetoothGattService serv = null;
+                BluetoothGattCharacteristic charac = null;
 
-            byte value;
-            try {
-                serv = mUdooBluService.getService(address, servUuid);
-                charac = serv.getCharacteristic(confUuid);
-                value = enable ? sensor.getEnableSensorCode()
-                        : UDOOBLESensor.DISABLE_SENSOR_CODE;
-                success = mUdooBluService.writeCharacteristic(address, charac, value);
-                mUdooBluService.waitIdle(Constant.GATT_TIMEOUT);
-            } catch (Exception e) {
-                if (BuildConfig.DEBUG)
-                    Log.e(TAG, "error enableSensor(), service uuid: " + servUuid.toString());
+                byte value;
+                try {
+                    serv = mUdooBluService.getService(address, servUuid);
+                    charac = serv.getCharacteristic(confUuid);
+                    value = enable ? sensor.getEnableSensorCode()
+                            : UDOOBLESensor.DISABLE_SENSOR_CODE;
+                    success = mUdooBluService.writeCharacteristic(address, charac, value);
+                    mUdooBluService.waitIdle(Constant.GATT_TIMEOUT);
+                } catch (Exception e) {
+                    if (BuildConfig.DEBUG)
+                        Log.e(TAG, "error enableSensor(), service uuid: " + servUuid.toString());
+                }
             }
-        }
+        } else if (BuildConfig.DEBUG)
+            Log.i(TAG, "BluManager not ready");
         return success;
     }
 
     public boolean enableNotification(String address, boolean enable, UDOOBLESensor sensor, OnCharacteristicsListener onCharacteristicsListener) {
         boolean success = false;
-        UUID servUuid = sensor.getService();
-        UUID dataUuid = sensor.getData();
-        BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
+        if (isBluManagerReady) {
 
-        if (serv != null) {
-            BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
-            success = mUdooBluService.setCharacteristicNotification(address, charac, enable);
-            mUdooBluService.waitIdle(Constant.GATT_TIMEOUT);
-            if(success){
-                mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
-                Log.i(TAG, "enableNotifications service " + servUuid.toString() + " is null: ");
+            UUID servUuid = sensor.getService();
+            UUID dataUuid = sensor.getData();
+            BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
+
+            if (serv != null) {
+                BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
+                success = mUdooBluService.setCharacteristicNotification(address, charac, enable);
+                mUdooBluService.waitIdle(Constant.GATT_TIMEOUT);
+                if (success) {
+                    mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
+                    Log.i(TAG, "enableNotifications service " + servUuid.toString() + " is null: ");
+                }
             }
-        }
+        } else if (BuildConfig.DEBUG)
+            Log.i(TAG, "BluManager not ready");
         return success;
     }
 
@@ -139,81 +183,88 @@ public class UdooBluManager {
     /* @param period is millisecond*/
     public boolean setNotificationPeriod(String address, UDOOBLESensor sensor, int period) {
         boolean success = false;
-        if (sensor != null) {
-            UUID servUuid = sensor.getService();
-            UUID confUuid = sensor.getConfig();
+        if (isBluManagerReady) {
+            if (sensor != null) {
+                UUID servUuid = sensor.getService();
+                UUID confUuid = sensor.getConfig();
 
-            BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
-            BluetoothGattCharacteristic charac = null;
-            if (serv != null) {
-                charac = serv.getCharacteristic(getCharacteristic(confUuid));
-                byte value = (byte) period;
-                success = mUdooBluService.writeCharacteristic(address, charac, value);
-                Log.i(TAG, "enable notification period: " + value);
-                mUdooBluService.waitIdle(Constant.GATT_TIMEOUT);
+                BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
+                BluetoothGattCharacteristic charac = null;
+                if (serv != null) {
+                    charac = serv.getCharacteristic(getCharacteristic(confUuid));
+                    byte value = (byte) period;
+                    success = mUdooBluService.writeCharacteristic(address, charac, value);
+                    Log.i(TAG, "enable notification period: " + value);
+                    mUdooBluService.waitIdle(Constant.GATT_TIMEOUT);
+                }
             }
-        }
+        } else if (BuildConfig.DEBUG)
+            Log.i(TAG, "BluManager not ready");
         return success;
     }
 
     public boolean setIoPinMode(String address, IOPIN iopin, IOPIN_TYPE iopin_type, IOPIN_MODE iopin_mode) {
         boolean success = false;
-        if (iopin != null && iopin_type != null && iopin_mode != null) {
+        if (isBluManagerReady) {
+            if (iopin != null && iopin_type != null && iopin_mode != null) {
 
-            UUID service = null, characteristic = null;
-            byte[] msg = null;
+                UUID service = null, characteristic = null;
+                byte[] msg = null;
 
-            if (iopin_type == IOPIN_TYPE.ANALOG && iopin_mode == IOPIN_MODE.INPUT && iopin != IOPIN.D6 && iopin != IOPIN.D7) {
-                service = UDOOBLE.UUID_IOPIN_SERV;
-                characteristic = UDOOBLE.UUID_IOPIN_ANALOG_CONF;
-                byte bPos = getByteMorePos(true, iopin);
-                msg = new byte[2];
-                msg[0] = 0;
-                msg[1] = bPos;
+                if (iopin_type == IOPIN_TYPE.ANALOG && iopin_mode == IOPIN_MODE.INPUT && iopin != IOPIN.D6 && iopin != IOPIN.D7) {
+                    service = UDOOBLE.UUID_IOPIN_SERV;
+                    characteristic = UDOOBLE.UUID_IOPIN_ANALOG_CONF;
+                    byte bPos = getByteMorePos(true, iopin);
+                    msg = new byte[2];
+                    msg[0] = 0;
+                    msg[1] = bPos;
 
-            } else if (iopin_type == IOPIN_TYPE.DIGITAL) {
-                service = UDOOBLE.UUID_IOPIN_SERV;
-                characteristic = UDOOBLE.UUID_IOPIN_DIGITAL_CONF;
-                msg = new byte[1];
-                msg[0] = getByteMorePos(iopin_mode == IOPIN_MODE.INPUT, iopin);
-            }
-
-            if (msg != null) {
-                BluetoothGattService serv = mUdooBluService.getService(address, service);
-                if (serv != null) {
-                    BluetoothGattCharacteristic charac = serv.getCharacteristic(characteristic);
-                    mUdooBluService.writeCharacteristic(address, charac, msg);
-                    mUdooBluService.waitIdle(Constant.GATT_TIMEOUT);
-                    success = true;
+                } else if (iopin_type == IOPIN_TYPE.DIGITAL) {
+                    service = UDOOBLE.UUID_IOPIN_SERV;
+                    characteristic = UDOOBLE.UUID_IOPIN_DIGITAL_CONF;
+                    msg = new byte[1];
+                    msg[0] = getByteMorePos(iopin_mode == IOPIN_MODE.INPUT, iopin);
                 }
 
-                if (BuildConfig.DEBUG)
-                    BitUtility.LogBinValue(msg, false);
+                if (msg != null) {
+                    BluetoothGattService serv = mUdooBluService.getService(address, service);
+                    if (serv != null) {
+                        BluetoothGattCharacteristic charac = serv.getCharacteristic(characteristic);
+                        mUdooBluService.writeCharacteristic(address, charac, msg);
+                        mUdooBluService.waitIdle(Constant.GATT_TIMEOUT);
+                        success = true;
+                    }
+
+                    if (BuildConfig.DEBUG)
+                        BitUtility.LogBinValue(msg, false);
+                }
             }
-        }
+        } else if (BuildConfig.DEBUG)
+            Log.i(TAG, "BluManager not ready");
         return success;
     }
 
 
     public boolean digitalRead(final String address, OnCharacteristicsListener onCharacteristicsListener) {
-
         boolean success = false;
-        UUID servUuid = UDOOBLE.UUID_IOPIN_SERV;
-        UUID dataUuid = UDOOBLE.UUID_IOPIN_DIGITAL_DATA;
+        if (isBluManagerReady) {
+            UUID servUuid = UDOOBLE.UUID_IOPIN_SERV;
+            UUID dataUuid = UDOOBLE.UUID_IOPIN_DIGITAL_DATA;
 
-        BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
+            BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
 
-        if (serv != null) {
-            BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
-            success = mUdooBluService.readCharacteristic(address, charac);
-            if (success) {
-                mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
-            }else
-                Log.i(TAG, "error on set property for this CharacteristicModel");
-        } else {
-            Log.i(TAG, "error not service for this CharacteristicModel");
-        }
-
+            if (serv != null) {
+                BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
+                success = mUdooBluService.readCharacteristic(address, charac);
+                if (success) {
+                    mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
+                } else
+                    Log.i(TAG, "error on set property for this CharacteristicModel");
+            } else {
+                Log.i(TAG, "error not service for this CharacteristicModel");
+            }
+        } else if (BuildConfig.DEBUG)
+            Log.i(TAG, "BluManager not ready");
         return success;
     }
 
@@ -221,8 +272,9 @@ public class UdooBluManager {
         return digitalWrite(address, getBytePos(iopin_value == IOPIN_VALUE.HIGH, iopin));
     }
 
-    private boolean digitalWrite(String address, byte value){
-            boolean success = false;
+    private boolean digitalWrite(String address, byte value) {
+        boolean success = false;
+        if (isBluManagerReady) {
             byte[] msg;
             UUID service = UDOOBLE.UUID_IOPIN_SERV, characteristic;
             characteristic = UDOOBLE.UUID_IOPIN_DIGITAL_DATA;
@@ -245,8 +297,9 @@ public class UdooBluManager {
                 }
                 BitUtility.LogBinValue(msg, false);
             }
-            return success;
-
+        } else if (BuildConfig.DEBUG)
+            Log.i(TAG, "BluManager not ready");
+        return success;
     }
 
     public boolean digitalWrite(String address, IOPIN_VALUE iopin_value, IOPIN... iopins) {
@@ -254,29 +307,26 @@ public class UdooBluManager {
         return digitalWrite(address, bPos);
     }
 
-    public byte[] digitalRead(String address, IOPIN iopin) {
-        byte[] value = new byte[2];
-        return value;
-    }
-
     public boolean readAnalog(final String address, OnCharacteristicsListener onCharacteristicsListener) {
         boolean success = false;
-        UUID servUuid = UDOOBLE.UUID_IOPIN_SERV;
-        UUID dataUuid = UDOOBLE.UUID_IOPIN_ANALOG_READ;
+        if (isBluManagerReady) {
+            UUID servUuid = UDOOBLE.UUID_IOPIN_SERV;
+            UUID dataUuid = UDOOBLE.UUID_IOPIN_ANALOG_READ;
 
-        BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
+            BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
 
-        if (serv != null) {
-            BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
-            success = mUdooBluService.readCharacteristic(address, charac);
-            if (success) {
-                mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
-            } else
-                Log.i(TAG, "error on set property for this CharacteristicModel");
-        } else {
-            Log.i(TAG, "error not service for this CharacteristicModel");
-        }
-
+            if (serv != null) {
+                BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
+                success = mUdooBluService.readCharacteristic(address, charac);
+                if (success) {
+                    mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
+                } else
+                    Log.i(TAG, "error on set property for this CharacteristicModel");
+            } else {
+                Log.i(TAG, "error not service for this CharacteristicModel");
+            }
+        } else if (BuildConfig.DEBUG)
+            Log.i(TAG, "BluManager not ready");
         return success;
     }
 
@@ -308,6 +358,31 @@ public class UdooBluManager {
         return succendSend;
     }
 
+    private final BroadcastReceiver mGattBoundReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if(BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(intent.getAction())) {
+
+                // Retrieve the bond state and the device involved
+                int bondState = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, -1);
+                BluetoothDevice dev = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+
+                // If the device has been paired...
+                if (bondState == BluetoothDevice.BOND_BONDED) {
+                    // ...check whether is supported and add it to the list
+                    Log.i(TAG, "onReceive: bonded");
+                }
+
+                // If the device has been unpaired...
+                else if (bondState == BluetoothDevice.BOND_NONE) {
+                    // ...remove it from the list
+                    Log.i(TAG, "onReceive: not bonded");
+                }
+            }
+        }
+
+    };
+
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -318,17 +393,23 @@ public class UdooBluManager {
             String address = intent.getStringExtra(UdooBluService.EXTRA_ADDRESS);
 
             if (UdooBluService.ACTION_GATT_CONNECTED.equals(action)) {
-                if (mDeviceListenerMap.containsKey(address)) {
-                    IBleDeviceListener iBleDeviceListener = mDeviceListenerMap.get(address);
-                    if (iBleDeviceListener != null)
-                        iBleDeviceListener.onDeviceConnected();
-                }
+                Log.i(TAG, "onReceive: connect" );
+                mUdooBluService.scanServices(address);
+
+//                if (mDeviceListenerMap.containsKey(address)) {
+//                    IBleDeviceListener iBleDeviceListener = mDeviceListenerMap.get(address);
+//                    if (iBleDeviceListener != null)
+//                        iBleDeviceListener.onDeviceConnected();
+//                }
             } else if (UdooBluService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
                 if (status == BluetoothGatt.GATT_SUCCESS) {
+                    Log.i(TAG, "onReceive: discover services" );
                     if (mDeviceListenerMap.containsKey(address)) {
+                        mUdooBluService.bond(address);
+
                         IBleDeviceListener iBleDeviceListener = mDeviceListenerMap.get(address);
                         if (iBleDeviceListener != null)
-                            iBleDeviceListener.onServicesDiscoveryCompleted();
+                            iBleDeviceListener.onServicesDiscoveryCompleted(address);
                     } else {
                         Toast.makeText(context, "Service discovery failed", Toast.LENGTH_LONG).show();
                         return;
@@ -430,6 +511,10 @@ public class UdooBluManager {
     }
 
     public boolean discoveryServices(String address) {
-       return mUdooBluService.scanServices(address);
+        if (isBluManagerReady) {
+            return mUdooBluService.scanServices(address);
+        } else if (BuildConfig.DEBUG)
+            Log.i(TAG, "BluManager not ready");
+        return false;
     }
 }

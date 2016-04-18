@@ -10,7 +10,7 @@ public class Constant {
     final public static byte LED_OFF = 0x00;
     final public static byte BLINK_ON = 0x02;
     final byte BLINK_OFF = 0x00;
-
+    final public static String BASE_UUID = "d7728bf3-79c6-452f-994c-9829da1a4229";
     final public static int GREEN_LED = 1;
     final public static int YELLOW_LED = 2;
     final public static int RED_LED = 3;

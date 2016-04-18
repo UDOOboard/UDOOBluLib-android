@@ -6,6 +6,6 @@ package org.udoo.udooblulib.interfaces;
  */
 public interface IBleDeviceListener {
     void onDeviceConnected();
-    void onServicesDiscoveryCompleted();
+    void onServicesDiscoveryCompleted(String address);
     void onDeviceDisconnect();
 }

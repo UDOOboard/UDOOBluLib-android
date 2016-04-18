@@ -24,6 +24,7 @@ import android.content.Intent;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.ParcelUuid;
 import android.util.Log;
 
 import org.udoo.udooblulib.common.GattInfo;
@@ -232,6 +233,45 @@ public class UdooBluService extends Service {
     // GATT API
     //
 
+
+    public String connectWithBounded() {
+        String address = "";
+        Set<BluetoothDevice> bluetoothDevices = mBtAdapter.getBondedDevices();
+        BluetoothDevice device = null;
+        for (BluetoothDevice bluetoothDevice : bluetoothDevices) {
+            if (bluetoothDevice.getAddress().startsWith("B0"))
+                device = bluetoothDevice;
+        }
+        if (device != null) {
+            if (connect(device.getAddress()))
+                address = device.getAddress();
+
+            Log.i(TAG, "connectWithBounded: try to connect... ");
+        }
+
+        return address;
+    }
+
+    public boolean bond(final String address) {
+        boolean success = false;
+        Set<BluetoothDevice> bluetoothDevices = mBtAdapter.getBondedDevices();
+        boolean bond = false;
+
+        for (BluetoothDevice bluetoothDevice : bluetoothDevices) {
+            if (bluetoothDevice.getAddress().equals(address))
+                bond = true;
+        }
+        if (!bond) {
+            BluetoothGatt bluetoothGatt = checkAndGetGattItem(address);
+            if (bluetoothGatt != null) {
+                BluetoothDevice bluetoothDevice = bluetoothGatt.getDevice();
+                if (bluetoothDevice != null)
+                    success = bluetoothDevice.createBond();
+            }
+        } else success = true;
+        return success;
+    }
+
     /**
      * Request a read on a given {@code BluetoothGattCharacteristic}. The read result is reported asynchronously through the
      * {@code BluetoothGattCallback#onCharacteristicRead(android.bluetooth.BluetoothGatt, android.bluetooth.BluetoothGattCharacteristic, int)} callback.
@@ -403,6 +443,9 @@ public class UdooBluService extends Service {
 
     public boolean scanLeDevice(final boolean enable, final BluScanCallBack scanCallback) {
         boolean isSuccess = false;
+//        List<ScanFilter> scanFilters = new ArrayList<>();
+//        ScanFilter scanFilter =new ScanFilter.Builder().setServiceUuid(new ParcelUuid((UUID.fromString(Constant.BASE_UUID)))).build();
+//        scanFilters.add(scanFilter);
         if (mBtAdapter != null) {
             mLEScanner = mBtAdapter.getBluetoothLeScanner();
             if (enable && mScanning.compareAndSet(false, true)) {
@@ -466,7 +509,7 @@ public class UdooBluService extends Service {
             // We want to directly connect to the device, so we are setting the
             // autoConnect parameter to false.
             Log.d(TAG, "Create a new GATT connection.");
-            bluetoothGatt = device.connectGatt(this, false, bluetoothGattCallbackBuilder());
+            bluetoothGatt = device.connectGatt(this, true, bluetoothGattCallbackBuilder());
             mBluetoothGatts.put(address, bluetoothGatt);
         } else {
             Log.w(TAG, "Attempt to connect in state: " + connectionState);
