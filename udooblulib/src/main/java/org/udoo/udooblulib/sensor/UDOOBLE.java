@@ -17,12 +17,15 @@ public class UDOOBLE {
             UUID_KEY_SERV = fromString("d772ffe1-79c6-452f-994c-9829da1a4229"), // received from notify or indication
             UUID_KEY_DATA = fromString("d7722902-79c6-452f-994c-9829da1a4229"), // 00:00
 
+    UUID_SENSORS_SERV                = fromString("d7728bf3-79c6-452f-994c-9829da1a4229"),
+
     /* IO Pins - Digital/Analog */
-    UUID_IOPIN_SERV = fromString("d7722d84-79c6-452f-994c-9829da1a4229"),
+    UUID_IOPIN_SERV                 = fromString("d772a064-79c6-452f-994c-9829da1a4229"),
+            UUID_IOPIN_PIN_MODE     = fromString("d772ace2-79c6-452f-994c-9829da1a4229"),
             UUID_IOPIN_DIGITAL_DATA = fromString("d7726bcf-79c6-452f-994c-9829da1a4229"), // 8 bit - 0: low, 1: high (0:A0...7:D7)
-            UUID_IOPIN_DIGITAL_CONF = fromString("d77299a6-79c6-452f-994c-9829da1a4229"), // 8 bit - 0: output, 1: input (0:A0...7:D7)
             UUID_IOPIN_ANALOG_READ  = fromString("d772233a-79c6-452f-994c-9829da1a4229"), //
-            UUID_IOPIN_ANALOG_CONF  = fromString("d772c77b-79c6-452f-994c-9829da1a4229"), //
+            UUID_IOPIN_PWM_ANALOG_INDEX     = fromString("d7720955-79c6-452f-994c-9829da1a4229"),
+            UUID_IOPIN_PWM_CONF     = fromString("d77215f4-79c6-452f-994c-9829da1a4229"),
 
     /* LED */
     UUID_LED_SERV = fromString("d772e605-79c6-452f-994c-9829da1a4229"),

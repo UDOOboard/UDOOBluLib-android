@@ -9,7 +9,7 @@ public class BitUtility {
     private static final String TAG = "BinUtility";
 
     public static byte setOnlyValuePosByte(boolean high, int pos) {
-        if (pos > 8) return 0;
+        if (pos > 128) return 0;
         return (byte) (((high ? 1 : 0) << pos) & 0xff);
     }
 
@@ -56,4 +56,20 @@ public class BitUtility {
         }else
             Log.i(TAG, "LogValue: null value");
     }
+
+    public static byte ToUnsignedByte(int value){
+        return (byte) value;
+    }
+
+    public static byte[] ToBytes(int i) {
+        byte[] result = new byte[4];
+
+        result[0] = (byte) (i >> 24);
+        result[1] = (byte) (i >> 16);
+        result[2] = (byte) (i >> 8);
+        result[3] = (byte) (i /*>> 0*/);
+
+        return result;
+    }
+
 }

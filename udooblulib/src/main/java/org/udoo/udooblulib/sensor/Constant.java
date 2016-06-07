@@ -22,12 +22,6 @@ public class Constant {
     // Activity
     public static final String EXTRA_DEVICE = "EXTRA_DEVICE";
 
-    /* IOPIN */
-    public enum IOPIN {D7, D6, A5, A4, A3, A2, A1, A0}
-    public enum IOPIN_TYPE {DIGITAL, ANALOG}
-    public enum IOPIN_MODE {INPUT, OUTPUT}
-    public enum IOPIN_VALUE{LOW, HIGH}
-
     /**
      * Risolution value of temperature
      * 0 bit significant

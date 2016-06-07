@@ -53,7 +53,6 @@ import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_BAR_SERV;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_GYR_CONF;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_GYR_DATA;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_GYR_SERV;
-import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_IOPIN_ANALOG_CONF;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_IOPIN_ANALOG_READ;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_IOPIN_SERV;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_KEY_DATA;
@@ -138,16 +137,17 @@ public enum UDOOBLESensor {
   BAROMETER_A(UUID_BAR_SERV, UUID_BAR_ALTIT_DATA, UUID_BAR_CONF) {
     @Override
     public int convertBar(final byte[] value) {
-      return ((value[2] << 16) | (value[1] << 8  & 0xff) | (value[0] & 0xffff));
+      return ((value[2] << 16) | (value[1] << 8 & 0xff) | (value[0] & 0xffff));
     }
-  },
-
-  IOPIN(UUID_IOPIN_SERV, UUID_IOPIN_ANALOG_READ, UUID_IOPIN_ANALOG_CONF) {
-    @Override
-    public float convertADC(final byte[] value) {
-      return (float) ((short) ((value[1] << 8) | (value[0] & 0xff)));
-    }
+//  },
   };
+
+//  IOPIN(UUID_IOPIN_SERV, UUID_IOPIN_ANALOG_READ, UUID_IOPIN_ANALOG_CONF) {
+//    @Override
+//    public float convertADC(final byte[] value) {
+//      return (float) ((short) ((value[1] << 8) | (value[0] & 0xff)));
+//    }
+//  };
 
 
   /**

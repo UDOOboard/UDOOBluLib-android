@@ -4,6 +4,7 @@ package org.udoo.udooblulib.service;
  * Created by harlem88 on 16/02/16.
  */
 
+import android.Manifest;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -21,13 +22,24 @@ import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.LocationManager;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.ParcelUuid;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
+import android.widget.Toast;
 
+import org.udoo.udooblulib.BuildConfig;
 import org.udoo.udooblulib.common.GattInfo;
+import org.udoo.udooblulib.exceptions.UdooBluException;
+import org.udoo.udooblulib.interfaces.IBleDeviceListener;
+import org.udoo.udooblulib.interfaces.OnBluOperationResult;
+import org.udoo.udooblulib.interfaces.OnResult;
 import org.udoo.udooblulib.scan.BluScanCallBack;
 import org.udoo.udooblulib.sensor.Constant;
 import org.udoo.udooblulib.sensor.UDOOBLESensor;
@@ -51,23 +63,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class UdooBluService extends Service {
     static final String TAG = "BluetoothLeService";
 
-    public final static String ACTION_GATT_CONNECTED = "com.aidilab.ble.common.ACTION_GATT_CONNECTED";
-    public final static String ACTION_GATT_DISCONNECTED = "com.aidilab.ble.ACTION_GATT_DISCONNECTED";
-    public final static String ACTION_GATT_SERVICES_DISCOVERED = "com.aidilab.ble.common.ACTION_GATT_SERVICES_DISCOVERED";
-    public final static String ACTION_DATA_READ = "com.aidilab.ble.common.ACTION_DATA_READ";
-    public final static String ACTION_DATA_NOTIFY = "com.aidilab.ble.common.ACTION_DATA_NOTIFY";
-    public final static String ACTION_DATA_WRITE = "com.aidilab.ble.common.ACTION_DATA_WRITE";
-    public final static String EXTRA_DATA = "com.aidilab.ble.common.EXTRA_DATA";
-    public final static String EXTRA_UUID = "com.aidilab.ble.common.EXTRA_UUID";
-    public final static String EXTRA_STATUS = "com.aidilab.ble.common.EXTRA_STATUS";
-    public final static String EXTRA_ADDRESS = "com.aidilab.ble.common.EXTRA_ADDRESS";
+    public final static String ACTION_GATT_CONNECTED = "ACTION_GATT_CONNECTED";
+    public final static String ACTION_GATT_DISCONNECTED = "ACTION_GATT_DISCONNECTED";
+    public final static String ACTION_GATT_SERVICES_DISCOVERED = "ACTION_GATT_SERVICES_DISCOVERED";
+    public final static String ACTION_DATA_READ = "ACTION_DATA_READ";
+    public final static String ACTION_DATA_NOTIFY = "ACTION_DATA_NOTIFY";
+    public final static String ACTION_DATA_WRITE = "ACTION_DATA_WRITE";
+    public final static String EXTRA_DATA = "EXTRA_DATA";
+    public final static String EXTRA_UUID = "EXTRA_UUID";
+    public final static String EXTRA_STATUS = "EXTRA_STATUS";
+    public final static String EXTRA_ADDRESS = "EXTRA_ADDRESS";
 
     // BLE
     private BluetoothManager mBluetoothManager = null;
     private BluetoothAdapter mBtAdapter = null;
-    private static final long SCAN_PERIOD = 20000;
+    private static final long SCAN_PERIOD = 60000;
 
-    private volatile boolean mBusy = false; // Write/read pending response
+    private AtomicBoolean mBusy; // Write/read pending response
     private HashMap<String, BluetoothGatt> mBluetoothGatts;
     private BlockingQueue<Callable> voidBlockingQueue = new LinkedBlockingQueue<>(10);
     private SeqObserverQueue seqObserverQueue = new SeqObserverQueue<>(voidBlockingQueue);
@@ -79,7 +91,7 @@ public class UdooBluService extends Service {
         intent.putExtra(EXTRA_ADDRESS, address);
         intent.putExtra(EXTRA_STATUS, status);
         sendBroadcast(intent);
-        mBusy = false;
+        mBusy = new AtomicBoolean(false);
     }
 
     private void broadcastUpdate(final String action, final BluetoothGattCharacteristic characteristic, final int status) {
@@ -88,7 +100,7 @@ public class UdooBluService extends Service {
         intent.putExtra(EXTRA_DATA, characteristic.getValue());
         intent.putExtra(EXTRA_STATUS, status);
         sendBroadcast(intent);
-        mBusy = false;
+        mBusy = new AtomicBoolean(false);
     }
 
     private void broadcastUpdate(final String action, final String address, final BluetoothGattCharacteristic characteristic, final int status) {
@@ -98,7 +110,7 @@ public class UdooBluService extends Service {
         intent.putExtra(EXTRA_DATA, characteristic.getValue());
         intent.putExtra(EXTRA_STATUS, status);
         sendBroadcast(intent);
-        mBusy = false;
+        mBusy = new AtomicBoolean(false);
     }
 
     private boolean checkGatt(String mac) {
@@ -111,7 +123,7 @@ public class UdooBluService extends Service {
             return false;
         }
 
-        if (mBusy) {
+        if (mBusy.get()) {
             Log.w(TAG, "LeService busy");
             return false;
         }
@@ -126,7 +138,7 @@ public class UdooBluService extends Service {
             bluetoothGatt = mBluetoothGatts.get(mac);
             if (bluetoothGatt != null) {
                 if (mBtAdapter != null) {
-                    if (mBusy) {
+                    if (mBusy.get()) {
                         Log.w(TAG, "LeService busy");
                         bluetoothGatt = null;
                     }
@@ -143,10 +155,9 @@ public class UdooBluService extends Service {
     public BluetoothGattService getService(String mBleAddress, UUID uuidLedServ) {
         BluetoothGattService gattService = null;
         BluetoothGatt bluetoothGatt = checkAndGetGattItem(mBleAddress);
-        if (bluetoothGatt != null) {
-            mBusy = true;
+        if (bluetoothGatt != null && mBusy.compareAndSet(false, true)) {
             gattService = bluetoothGatt.getService(uuidLedServ);
-            mBusy = false;
+            mBusy.set(false);
         }
         return gattService;
     }
@@ -181,29 +192,29 @@ public class UdooBluService extends Service {
 
     private final IBinder binder = new LocalBinder();
 
+
     /**
      * Initializes a reference to the local Bluetooth adapter.
      *
      * @return Return true if the initialization is successful.
      */
     public boolean initialize() {
-
         Log.d(TAG, "initialize");
         mBluetoothGatts = new HashMap<>();
         mScanning = new AtomicBoolean(false);
-        if (mBluetoothManager == null) {
-            mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-            if (mBluetoothManager == null) {
-                Log.e(TAG, "Unable to initialize BluetoothManager.");
-                return false;
-            }
-        }
-
-        mBtAdapter = mBluetoothManager.getAdapter();
-        if (mBtAdapter == null) {
-            Log.e(TAG, "Unable to obtain a BluetoothAdapter.");
-            return false;
-        }
+//        if (mBluetoothManager == null) {
+//            mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+//            if (mBluetoothManager == null) {
+//                Log.e(TAG, "Unable to initialize BluetoothManager.");
+//                return false;
+//            }
+//        }
+//
+//        mBtAdapter = mBluetoothManager.getAdapter();
+//        if (mBtAdapter == null) {
+//            Log.e(TAG, "Unable to obtain a BluetoothAdapter.");
+//            return false;
+//        }
         seqObserverQueue.run();
         return true;
     }
@@ -234,23 +245,23 @@ public class UdooBluService extends Service {
     //
 
 
-    public String connectWithBounded() {
-        String address = "";
-        Set<BluetoothDevice> bluetoothDevices = mBtAdapter.getBondedDevices();
-        BluetoothDevice device = null;
-        for (BluetoothDevice bluetoothDevice : bluetoothDevices) {
-            if (bluetoothDevice.getAddress().startsWith("B0"))
-                device = bluetoothDevice;
-        }
-        if (device != null) {
-            if (connect(device.getAddress()))
-                address = device.getAddress();
-
-            Log.i(TAG, "connectWithBounded: try to connect... ");
-        }
-
-        return address;
-    }
+//    public String connectWithBounded() {
+//        String address = "";
+//        Set<BluetoothDevice> bluetoothDevices = mBtAdapter.getBondedDevices();
+//        BluetoothDevice device = null;
+//        for (BluetoothDevice bluetoothDevice : bluetoothDevices) {
+//            if (bluetoothDevice.getAddress().startsWith("B0"))
+//                device = bluetoothDevice;
+//        }
+//        if (device != null) {
+//            if (connect(device.getAddress()))
+//                address = device.getAddress();
+//
+//            Log.i(TAG, "connectWithBounded: try to connect... ");
+//        }
+//
+//        return address;
+//    }
 
     public boolean bond(final String address) {
         boolean success = false;
@@ -278,15 +289,14 @@ public class UdooBluService extends Service {
      *
      * @param characteristic The characteristic to read from.
      */
-    public boolean readCharacteristic(final String mac, final BluetoothGattCharacteristic characteristic) {
-        BluetoothGatt bluetoothGatt = checkAndGetGattItem(mac);
-        boolean success = false;
-        if (bluetoothGatt != null && characteristic != null) {
-            mBusy = true;
-            success = bluetoothGatt.readCharacteristic(characteristic);
-        }
-        return success;
-    }
+//    private boolean readCharacteristic(final String mac, final BluetoothGattCharacteristic characteristic) {
+//        BluetoothGatt bluetoothGatt = checkAndGetGattItem(mac);
+//        boolean success = false;
+//        if (bluetoothGatt != null && characteristic != null) {
+//            success = bluetoothGatt.readCharacteristic(characteristic);
+//        }
+//        return success;
+//    }
 
     /**
      * Request a read on a given {@code BluetoothGattCharacteristic}. The read result is reported asynchronously through the
@@ -294,66 +304,57 @@ public class UdooBluService extends Service {
      *
      * @param characteristic The characteristic to read from.
      */
-    public void readCharacteristic(final String mac, final BluetoothGattCharacteristic characteristic, final Observer observer) throws InterruptedException {
-        seqObserverQueue.addObserver(observer);
-        voidBlockingQueue.put(new Callable<Boolean>() {
-            @Override
-            public Boolean call() throws Exception {
-                BluetoothGatt bluetoothGatt = checkAndGetGattItem(mac);
-                boolean success = false;
-                if (bluetoothGatt != null && characteristic != null) {
-                    mBusy = true;
-                    success = bluetoothGatt.readCharacteristic(characteristic);
-                    waitIdle(Constant.GATT_TIMEOUT);
+    public void readCharacteristic(final String mac, final BluetoothGattCharacteristic characteristic){
+        try {
+            voidBlockingQueue.put(new Callable<Boolean>() {
+                @Override
+                public Boolean call() throws Exception {
+                    BluetoothGatt bluetoothGatt = checkAndGetGattItem(mac);
+                    boolean success = false;
+                    if (bluetoothGatt != null && characteristic != null) {
+                        mBusy.set(true);
+                        success = bluetoothGatt.readCharacteristic(characteristic);
+                        waitIdle(Constant.GATT_TIMEOUT);
+                        mBusy.set(false);
+                    }
+                    return success;
                 }
-                return success;
-            }
-        });
+            });
 
-    }
-
-
-    public boolean writeCharacteristic(String mac, BluetoothGattCharacteristic characteristic, byte b) {
-        BluetoothGatt bluetoothGatt = checkAndGetGattItem(mac);
-        boolean result = false;
-        if (bluetoothGatt != null && characteristic != null) {
-            byte[] val = new byte[1];
-            val[0] = b;
-            characteristic.setValue(val);
-            mBusy = true;
-            result = bluetoothGatt.writeCharacteristic(characteristic);
+        } catch (InterruptedException e) {
+            if(BuildConfig.DEBUG)
+                Log.e(TAG, "readCharacteristic: " +e.getMessage());
         }
-        return result;
     }
 
-    public boolean writeCharacteristic(String mac, final BluetoothGattCharacteristic characteristic, byte[] b) {
-        BluetoothGatt bluetoothGatt = checkAndGetGattItem(mac);
-        boolean result = false;
-        if (bluetoothGatt != null) {
-            characteristic.setValue(b);
-            mBusy = true;
-            result = bluetoothGatt.writeCharacteristic(characteristic);
-        }
-        return result;
-    }
-
-    public void writeCharacteristic(final String mac, final BluetoothGattCharacteristic characteristic,final byte[] b , Observer observer) throws InterruptedException {
+    public void writeCharacteristic(final String mac, final BluetoothGattCharacteristic characteristic,final byte[] b , Observer observer){
         if(observer !=  null)
             seqObserverQueue.addObserver(observer);
 
-        voidBlockingQueue.put(new Callable<Boolean>() {
-            @Override
-            public Boolean call() throws Exception {
-                BluetoothGatt bluetoothGatt = checkAndGetGattItem(mac);
-                boolean result = false;
-                if (bluetoothGatt != null) {
-                    characteristic.setValue(b);
-                    mBusy = true;
-                    result = bluetoothGatt.writeCharacteristic(characteristic);
+        try {
+            voidBlockingQueue.put(new Callable<Boolean>() {
+                @Override
+                public Boolean call() throws Exception {
+                    BluetoothGatt bluetoothGatt = checkAndGetGattItem(mac);
+                    boolean result = false;
+                    if (bluetoothGatt != null ) {
+                        mBusy.set(true);
+                        characteristic.setValue(b);
+                        result = bluetoothGatt.writeCharacteristic(characteristic);
+                        waitIdle(Constant.GATT_TIMEOUT);
+                        mBusy.set(false);
+                    }
+                    return result;
                 }
-                return result;
+            });
+        } catch (InterruptedException e) {
+            if(observer != null){
+                observer.update(seqObserverQueue, new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
+                seqObserverQueue.deleteObserver(observer);
             }
-        });
+            if (BuildConfig.DEBUG)
+                Log.e(TAG, "writeCharacteristic: " + e.getMessage());
+        }
     }
 
     public boolean scanServices(String mac) {
@@ -420,7 +421,6 @@ public class UdooBluService extends Service {
                     Log.i(TAG, "disable notification");
                     clientConfig.setValue(BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
                 }
-                mBusy = true;
                 result = bluetoothGatt.writeDescriptor(clientConfig);
             }
         } else {
@@ -441,14 +441,18 @@ public class UdooBluService extends Service {
         return result;
     }
 
-    public boolean scanLeDevice(final boolean enable, final BluScanCallBack scanCallback) {
-        boolean isSuccess = false;
+    public void scanLeDevice(final boolean enable, final BluScanCallBack scanCallback) {
 //        List<ScanFilter> scanFilters = new ArrayList<>();
 //        ScanFilter scanFilter =new ScanFilter.Builder().setServiceUuid(new ParcelUuid((UUID.fromString(Constant.BASE_UUID)))).build();
 //        scanFilters.add(scanFilter);
-        if (mBtAdapter != null) {
+
+        UdooBluException udooBluException = checkBluetooth(getBaseContext());
+        if (udooBluException != null) {
+            if (scanCallback != null)
+                scanCallback.onError(udooBluException);
+        } else {
             mLEScanner = mBtAdapter.getBluetoothLeScanner();
-            if (enable && mScanning.compareAndSet(false, true)) {
+            if (enable && mScanning.compareAndSet(false, true)){
                 mLEScanner.startScan(scanCallback);
                 Handler handler = new Handler();
                 handler.postDelayed(new Runnable() {
@@ -456,21 +460,17 @@ public class UdooBluService extends Service {
                     public void run() {
                         mLEScanner.stopScan(scanCallback);
                         mScanning.set(false);
-                        if(scanCallback != null)
+                        if (scanCallback != null)
                             scanCallback.onScanFinished();
                     }
                 }, SCAN_PERIOD);
-
-                isSuccess = true;
-            } else if(mScanning.compareAndSet(true, false)){
+            } else {
+                mScanning.set(false);
                 mLEScanner.stopScan(scanCallback);
-                if(scanCallback != null)
+                if (scanCallback != null)
                     scanCallback.onScanFinished();
-
-                isSuccess = true;
             }
         }
-        return isSuccess;
     }
 
     /**
@@ -480,42 +480,36 @@ public class UdooBluService extends Service {
      * @return Return true if the connection is initiated successfully. The connection result is reported asynchronously through the
      * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)} callback.
      */
-    public boolean connect(final String address) {
-        if (mBtAdapter == null || address == null) {
-            Log.w(TAG, "BluetoothAdapter not initialized or unspecified address.");
-            return false;
-        }
-        final BluetoothDevice device = mBtAdapter.getRemoteDevice(address);
-        int connectionState = mBluetoothManager.getConnectionState(device, BluetoothProfile.GATT);
-
-        if (connectionState == BluetoothProfile.STATE_DISCONNECTED) {
-
-            BluetoothGatt bluetoothGatt = checkAndGetGattItem(address);
-            // Previously connected device. Try to reconnect.
-            if (bluetoothGatt != null) {
-                Log.d(TAG, "Re-use GATT connection");
-                if (bluetoothGatt.connect()) {
-                    return true;
-                } else {
-                    Log.w(TAG, "GATT re-connect failed.");
-                    return false;
-                }
-            }
-
-            if (device == null) {
-                Log.w(TAG, "Device not found.  Unable to connect.");
-                return false;
-            }
-            // We want to directly connect to the device, so we are setting the
-            // autoConnect parameter to false.
-            Log.d(TAG, "Create a new GATT connection.");
-            bluetoothGatt = device.connectGatt(this, true, bluetoothGattCallbackBuilder());
-            mBluetoothGatts.put(address, bluetoothGatt);
+    public void connect(final String address, IBleDeviceListener iBleDeviceListener) {
+        UdooBluException udooBluException = checkBluetooth(getBaseContext());
+        if (udooBluException != null) {
+            if (iBleDeviceListener != null)
+                iBleDeviceListener.onError(udooBluException);
         } else {
-            Log.w(TAG, "Attempt to connect in state: " + connectionState);
-            return false;
+            final BluetoothDevice device = mBtAdapter.getRemoteDevice(address);
+            int connectionState = mBluetoothManager.getConnectionState(device, BluetoothProfile.GATT);
+
+            if (connectionState == BluetoothProfile.STATE_DISCONNECTED) {
+                BluetoothGatt bluetoothGatt = checkAndGetGattItem(address);
+                // Previously connected device. Try to reconnect.
+                if (bluetoothGatt != null) {
+                    Log.d(TAG, "Re-use GATT connection");
+                    if (bluetoothGatt.connect()) {
+                    } else {
+                        Log.w(TAG, "GATT re-connect failed.");
+                    }
+                } else if (device == null) {
+                    Log.w(TAG, "Device not found.  Unable to connect.");
+                } else {
+                    Log.d(TAG, "Create a new GATT connection.");
+                    bluetoothGatt = device.connectGatt(this, true, bluetoothGattCallbackBuilder());
+                    mBluetoothGatts.put(address, bluetoothGatt);
+                }
+            } else {
+                Log.w(TAG, "Attempt to connect in state: " + connectionState);
+                bond(address);
+            }
         }
-        return true;
     }
 
     /**
@@ -560,10 +554,10 @@ public class UdooBluService extends Service {
         return devList.size();
     }
 
-    public boolean waitIdle(int i) {
+    private boolean waitIdle(int i) {
         i /= 10;
         while (--i > 0) {
-            if (mBusy)
+            if (mBusy.get())
                 try {
                     Thread.sleep(10);
                 } catch (InterruptedException e) {
@@ -629,16 +623,55 @@ public class UdooBluService extends Service {
 
             @Override
             public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-                mBusy = false;
                 Log.i(TAG, "onDescriptorRead");
             }
 
             @Override
             public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-                mBusy = false;
                 Log.i(TAG, "onDescriptorWrite");
             }
         };
 
+    }
+
+    public UdooBluException checkBluetooth(final Context context){
+        UdooBluException udooBluException = null;
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+            udooBluException = new UdooBluException(UdooBluException.BLUETOOTH_LE_NOT_SUPPORTED);
+        } else {
+            if (mBluetoothManager == null)
+                mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+
+            if (mBluetoothManager == null)
+                udooBluException = new UdooBluException(UdooBluException.BLUETOOTH_CANNOT_START);
+
+            if (mBtAdapter == null)
+                mBtAdapter = mBluetoothManager.getAdapter();
+
+            if (mBtAdapter == null || !mBtAdapter.isEnabled())
+                udooBluException = new UdooBluException(UdooBluException.BLUETOOTH_DISABLED);
+
+            else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (isLocationPermissionApproved(context))
+                    udooBluException = new UdooBluException(UdooBluException.LOCATION_PERMISSION_MISSING);
+                else if (isLocationProviderEnabled((LocationManager) context.getSystemService(Context.LOCATION_SERVICE)))
+                    udooBluException = new UdooBluException(UdooBluException.LOCATION_SERVICES_DISABLED);
+            }
+        }
+        return udooBluException;
+    }
+
+    public boolean isLocationPermissionApproved(Context context) {
+        return isPermissionGranted(Manifest.permission.ACCESS_COARSE_LOCATION, context)
+                || isPermissionGranted(Manifest.permission.ACCESS_FINE_LOCATION, context);
+    }
+
+    public boolean isLocationProviderEnabled(LocationManager locationManager) {
+        return locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+                || locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+    }
+
+    private boolean isPermissionGranted(String permission, Context context) {
+        return ContextCompat.checkSelfPermission(getApplicationContext(), permission) == PackageManager.PERMISSION_GRANTED;
     }
 }

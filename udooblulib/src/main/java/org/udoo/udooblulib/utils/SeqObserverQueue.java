@@ -1,5 +1,10 @@
 package org.udoo.udooblulib.utils;
 
+import android.util.Log;
+
+import org.udoo.udooblulib.BuildConfig;
+import org.udoo.udooblulib.exceptions.UdooBluException;
+
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Queue;
@@ -13,6 +18,7 @@ import java.util.concurrent.Executors;
  */
 public class SeqObserverQueue<T> extends Observable implements Runnable {
     private BlockingQueue<Callable> tBlockingDeque;
+    private final static String TAG = "SeqObserverQueue";
 
     public SeqObserverQueue(BlockingQueue<Callable> tBlockingQeque) {
         tBlockingDeque = tBlockingQeque;
@@ -138,7 +144,9 @@ public class SeqObserverQueue<T> extends Observable implements Runnable {
                             notifyObserver(result);
                         }
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        notifyObserver(new UdooBluException(UdooBluException.BLU_SEQ_OBSERVER_ERROR));
+                        if (BuildConfig.DEBUG)
+                            Log.e(TAG, "run: "+ e.getMessage());
                     }
 
                 }
