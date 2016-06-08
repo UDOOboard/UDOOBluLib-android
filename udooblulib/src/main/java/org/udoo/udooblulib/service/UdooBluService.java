@@ -327,31 +327,28 @@ public class UdooBluService extends Service {
         }
     }
 
-    public void writeCharacteristic(final String mac, final BluetoothGattCharacteristic characteristic,final byte[] b , Observer observer){
-        if(observer !=  null)
-            seqObserverQueue.addObserver(observer);
-
+    public void writeCharacteristic(final String address, final BluetoothGattCharacteristic characteristic, final byte[] b) {
         try {
             voidBlockingQueue.put(new Callable<Boolean>() {
                 @Override
                 public Boolean call() throws Exception {
-                    BluetoothGatt bluetoothGatt = checkAndGetGattItem(mac);
+                    BluetoothGatt bluetoothGatt = checkAndGetGattItem(address);
                     boolean result = false;
-                    if (bluetoothGatt != null ) {
+                    if (bluetoothGatt != null) {
                         mBusy.set(true);
                         characteristic.setValue(b);
                         result = bluetoothGatt.writeCharacteristic(characteristic);
                         waitIdle(Constant.GATT_TIMEOUT);
                         mBusy.set(false);
+                        if (!result) {
+                            broadcastUpdate(ACTION_DATA_WRITE, address, characteristic, BluetoothGatt.GATT_WRITE_NOT_PERMITTED);
+                        }
                     }
                     return result;
                 }
             });
         } catch (InterruptedException e) {
-            if(observer != null){
-                observer.update(seqObserverQueue, new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
-                seqObserverQueue.deleteObserver(observer);
-            }
+            broadcastUpdate(ACTION_DATA_WRITE, address, characteristic, BluetoothGatt.GATT_WRITE_NOT_PERMITTED);
             if (BuildConfig.DEBUG)
                 Log.e(TAG, "writeCharacteristic: " + e.getMessage());
         }

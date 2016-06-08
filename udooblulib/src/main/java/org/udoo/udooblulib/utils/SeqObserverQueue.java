@@ -137,13 +137,9 @@ public class SeqObserverQueue<T> extends Observable implements Runnable {
             public void run() {
                 while (true) {
                     try {
-                        Callable<T> callable = tBlockingDeque.take();
-                        T result = callable.call();
-                        if(countObservers() > 0){
-                            setChanged();
-                            notifyObserver(result);
-                        }
+                        tBlockingDeque.take().call();
                     } catch (Exception e) {
+                        setChanged();
                         notifyObserver(new UdooBluException(UdooBluException.BLU_SEQ_OBSERVER_ERROR));
                         if (BuildConfig.DEBUG)
                             Log.e(TAG, "run: "+ e.getMessage());
