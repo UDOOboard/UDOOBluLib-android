@@ -19,6 +19,7 @@ import android.widget.Toast;
 import org.udoo.udooblulib.BuildConfig;
 import org.udoo.udooblulib.exceptions.UdooBluException;
 import org.udoo.udooblulib.interfaces.IBleDeviceListener;
+import org.udoo.udooblulib.interfaces.INotificationListener;
 import org.udoo.udooblulib.interfaces.OnBluOperationResult;
 import org.udoo.udooblulib.interfaces.OnCharacteristicsListener;
 import org.udoo.udooblulib.model.IOPin;
@@ -37,7 +38,7 @@ import java.util.UUID;
  * Created by harlem88 on 24/03/16.
  */
 
-public class UdooBluManagerImpl {
+public class UdooBluManagerImpl implements UdooBluManager{
     private boolean mBound;
     private UdooBluService mUdooBluService;
     private HashMap<String, OnBluOperationResult<Boolean>> mOnResultMap;
@@ -72,8 +73,7 @@ public class UdooBluManagerImpl {
         init(context);
     }
 
-    private void init(Context context) {
-
+    public void init(Context context) {
         mDeviceListenerMap = new HashMap<>();
         mOnCharacteristicsListenerMap = new HashMap<>();
         mOnResultMap = new HashMap<>();
@@ -159,7 +159,7 @@ public class UdooBluManagerImpl {
 //        return address;
 //    }
 
-    private boolean enableSensor(String address, UDOOBLESensor sensor, boolean enable, Observer observer) {
+    private boolean enableSensor(String address, UDOOBLESensor sensor, boolean enable) {
         boolean success = false;
         if (isBluManagerReady) {
             if (sensor != null) {
@@ -524,6 +524,136 @@ public class UdooBluManagerImpl {
         return succendSend;
     }
 
+    @Override
+    public boolean setPinMode(IOPin.IOPIN_PIN pin, IOPin.IOPIN_MODE mode) {
+        return false;
+    }
+
+    @Override
+    public boolean digitalWrite(IOPin.IOPIN_PIN pin, IOPin.IOPIN_DIGITAL_VALUE value) {
+        return false;
+    }
+
+    @Override
+    public boolean digitalRead(IOPin.IOPIN_PIN pin) {
+        return false;
+    }
+
+    @Override
+    public boolean analogRead(IOPin.IOPIN_PIN pin) {
+        return false;
+    }
+
+    @Override
+    public void readAccelerometer(OnCharacteristicsListener onCharacteristicsListener) {
+
+    }
+
+    @Override
+    public void subscribeNotificationAccelerometer(INotificationListener<Integer> notificationListener) {
+
+    }
+
+    @Override
+    public void subscribeNotificationAccelerometer(INotificationListener<Integer> notificationListener, int period) {
+
+    }
+
+    @Override
+    public void readGyroscope(OnCharacteristicsListener onCharacteristicsListener) {
+
+    }
+
+    @Override
+    public void subscribeNotificationGyroscope(INotificationListener<Integer> notificationListener) {
+
+    }
+
+    @Override
+    public void subscribeNotificationGyroscope(INotificationListener<Integer> notificationListener, int period) {
+
+    }
+
+    @Override
+    public void readMagnetometer(OnCharacteristicsListener onCharacteristicsListener) {
+
+    }
+
+    @Override
+    public void subscribeNotificationMagnetometer(INotificationListener<Integer> notificationListener) {
+
+    }
+
+    @Override
+    public void subscribeNotificationMagnetometer(INotificationListener<Integer> notificationListener, int period) {
+
+    }
+
+    @Override
+    public void readBarometer(OnCharacteristicsListener onCharacteristicsListener) {
+
+    }
+
+    @Override
+    public void subscribeNotificationBarometer(INotificationListener<Integer> notificationListener) {
+
+    }
+
+    @Override
+    public void subscribeNotificationBarometer(INotificationListener<Integer> notificationListener, int period) {
+
+    }
+
+    @Override
+    public void readTemparature(OnCharacteristicsListener onCharacteristicsListener) {
+
+    }
+
+    @Override
+    public void subscribeNotificationTemparature(INotificationListener<Integer> notificationListener) {
+
+    }
+
+    @Override
+    public void subscribeNotificationTemparature(INotificationListener<Integer> notificationListener, int period) {
+
+    }
+
+    @Override
+    public void readHumidity(OnCharacteristicsListener onCharacteristicsListener) {
+
+    }
+
+    @Override
+    public void subscribeNotificationHumidity(INotificationListener<Integer> notificationListener) {
+
+    }
+
+    @Override
+    public void subscribeNotificationHumidity(INotificationListener<Integer> notificationListener, int period) {
+
+    }
+
+    @Override
+    public void readAmbientLight(OnCharacteristicsListener onCharacteristicsListener) {
+
+    }
+
+    @Override
+    public void subscribeNotificationAmbientLight(INotificationListener<Integer> notificationListener) {
+
+    }
+
+    @Override
+    public void subscribeNotificationAmbientLight(INotificationListener<Integer> notificationListener, int period) {
+
+    }
+
+    @Override
+    public boolean pwmWrite(IOPin.IOPIN_PIN pin, int freq, int dutyCycle) {
+        return false;
+    }
+
     private final BroadcastReceiver mGattBoundReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -667,5 +797,10 @@ public class UdooBluManagerImpl {
 
     public void disconnect(String address){
         mUdooBluService.disconnect(address);
+    }
+
+    @Override
+    public boolean bond(String address) {
+        return false;
     }
 }
