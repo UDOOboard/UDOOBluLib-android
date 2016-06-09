@@ -11,7 +11,8 @@ import java.lang.annotation.RetentionPolicy;
 
 public class UdooBluException extends RuntimeException {
 
-    @IntDef({BLU_GENERIC_ERROR, BLU_SERVICE_NOT_READY, BLUETOOTH_LE_NOT_SUPPORTED, BLUETOOTH_CANNOT_START, BLUETOOTH_DISABLED, BLUETOOTH_NOT_AVAILABLE, LOCATION_PERMISSION_MISSING, LOCATION_SERVICES_DISABLED, BLU_SEQ_OBSERVER_ERROR, BLU_WRITE_CHARAC_ERROR})
+    @IntDef({BLU_GENERIC_ERROR, BLU_SERVICE_NOT_READY, BLUETOOTH_LE_NOT_SUPPORTED, BLUETOOTH_CANNOT_START, BLUETOOTH_DISABLED, BLUETOOTH_NOT_AVAILABLE,
+            LOCATION_PERMISSION_MISSING, LOCATION_SERVICES_DISABLED, BLU_SEQ_OBSERVER_ERROR,BLU_READ_CHARAC_ERROR, BLU_WRITE_CHARAC_ERROR, BLU_GATT_SERVICE_NOT_FOUND, BLU_SENSOR_NOT_FOUND})
     @Retention(RetentionPolicy.SOURCE)
     public @interface Reason {}
 
@@ -24,7 +25,10 @@ public class UdooBluException extends RuntimeException {
     public static final int LOCATION_PERMISSION_MISSING = 5;
     public static final int LOCATION_SERVICES_DISABLED = 6;
     public static final int BLU_SEQ_OBSERVER_ERROR = 7;
-    public static final int BLU_WRITE_CHARAC_ERROR = 8;
+    public static final int BLU_READ_CHARAC_ERROR = 8;
+    public static final int BLU_WRITE_CHARAC_ERROR = 9;
+    public static final int BLU_GATT_SERVICE_NOT_FOUND = 10;
+    public static final int BLU_SENSOR_NOT_FOUND = 11;
 
     private final int reason;
 

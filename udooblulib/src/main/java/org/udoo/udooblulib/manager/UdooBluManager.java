@@ -4,10 +4,13 @@ import android.content.Context;
 
 import org.udoo.udooblulib.interfaces.IBleDeviceListener;
 import org.udoo.udooblulib.interfaces.INotificationListener;
+import org.udoo.udooblulib.interfaces.IReaderListener;
+import org.udoo.udooblulib.interfaces.OnBluOperationResult;
 import org.udoo.udooblulib.interfaces.OnCharacteristicsListener;
 import org.udoo.udooblulib.model.IOPin;
 import org.udoo.udooblulib.scan.BluScanCallBack;
 import org.udoo.udooblulib.sensor.UDOOBLESensor;
+import org.udoo.udooblulib.utils.Point3D;
 
 /**
  * Created by harlem88 on 31/05/16.
@@ -29,31 +32,31 @@ public interface UdooBluManager {
 
     boolean turnLed(String address, int color, byte func, int millis);
 
-    boolean setPinMode(IOPin.IOPIN_PIN pin, IOPin.IOPIN_MODE mode);
+    void setIoPinMode(String address, final OnBluOperationResult<Boolean> onResultListener, IOPin... ioPins);
     boolean digitalWrite(IOPin.IOPIN_PIN pin, IOPin.IOPIN_DIGITAL_VALUE value);
     boolean digitalRead(IOPin.IOPIN_PIN pin);
     boolean analogRead(IOPin.IOPIN_PIN pin);
 
 
-    void readAccelerometer(OnCharacteristicsListener onCharacteristicsListener);
-    void subscribeNotificationAccelerometer(INotificationListener<Integer> notificationListener);
-    void subscribeNotificationAccelerometer(INotificationListener<Integer> notificationListener, int period);
+    void readAccelerometer(String address, IReaderListener<Point3D> readerListener);
+    void subscribeNotificationAccelerometer(String address, INotificationListener<Point3D> notificationListener);
+    void subscribeNotificationAccelerometer(String address, INotificationListener<Point3D> notificationListener, int period);
 
-    void readGyroscope(OnCharacteristicsListener onCharacteristicsListener);
-    void subscribeNotificationGyroscope(INotificationListener<Integer> notificationListener);
-    void subscribeNotificationGyroscope(INotificationListener<Integer> notificationListener, int period);
+    void readGyroscope(IReaderListener<Point3D> readerListener);
+    void subscribeNotificationGyroscope(INotificationListener<Point3D> notificationListener);
+    void subscribeNotificationGyroscope(INotificationListener<Point3D> notificationListener, int period);
 
-    void readMagnetometer(OnCharacteristicsListener onCharacteristicsListener);
+    void readMagnetometer(IReaderListener<Point3D> readerListener);
     void subscribeNotificationMagnetometer(INotificationListener<Integer> notificationListener);
     void subscribeNotificationMagnetometer(INotificationListener<Integer> notificationListener, int period);
 
-    void readBarometer(OnCharacteristicsListener onCharacteristicsListener);
+    void readBarometer(IReaderListener<Integer> readerListener);
     void subscribeNotificationBarometer(INotificationListener<Integer> notificationListener);
     void subscribeNotificationBarometer(INotificationListener<Integer> notificationListener, int period);
 
-    void readTemparature(OnCharacteristicsListener onCharacteristicsListener);
-    void subscribeNotificationTemparature(INotificationListener<Integer> notificationListener);
-    void subscribeNotificationTemparature(INotificationListener<Integer> notificationListener, int period);
+    void readTemparature(IReaderListener<Float> onCharacteristicsListener);
+    void subscribeNotificationTemparature(INotificationListener<Float> notificationListener);
+    void subscribeNotificationTemparature(INotificationListener<Float> notificationListener, int period);
 
     void readHumidity(OnCharacteristicsListener onCharacteristicsListener);
     void subscribeNotificationHumidity(INotificationListener<Integer> notificationListener);
