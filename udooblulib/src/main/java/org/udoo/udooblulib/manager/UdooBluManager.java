@@ -39,30 +39,31 @@ public interface UdooBluManager {
 
 
     void readAccelerometer(String address, IReaderListener<Point3D> readerListener);
+    void readGyroscope(String address, IReaderListener<Point3D> readerListener);
+    void readMagnetometer(String address, IReaderListener<Point3D> readerListener);
+    void readBarometer(String address, IReaderListener<Integer> readerListener);
+    void readTemperature(String address, IReaderListener<Float> onCharacteristicsListener);
+    void readHumidity(String address, IReaderListener<Float> onCharacteristicsListener);
+    void readAmbientLight(String address, IReaderListener<Float> onCharacteristicsListener);
+
     void subscribeNotificationAccelerometer(String address, INotificationListener<Point3D> notificationListener);
     void subscribeNotificationAccelerometer(String address, INotificationListener<Point3D> notificationListener, int period);
 
-    void readGyroscope(IReaderListener<Point3D> readerListener);
     void subscribeNotificationGyroscope(INotificationListener<Point3D> notificationListener);
     void subscribeNotificationGyroscope(INotificationListener<Point3D> notificationListener, int period);
 
-    void readMagnetometer(IReaderListener<Point3D> readerListener);
     void subscribeNotificationMagnetometer(INotificationListener<Integer> notificationListener);
     void subscribeNotificationMagnetometer(INotificationListener<Integer> notificationListener, int period);
 
-    void readBarometer(IReaderListener<Integer> readerListener);
     void subscribeNotificationBarometer(INotificationListener<Integer> notificationListener);
     void subscribeNotificationBarometer(INotificationListener<Integer> notificationListener, int period);
 
-    void readTemparature(IReaderListener<Float> onCharacteristicsListener);
     void subscribeNotificationTemparature(INotificationListener<Float> notificationListener);
     void subscribeNotificationTemparature(INotificationListener<Float> notificationListener, int period);
 
-    void readHumidity(OnCharacteristicsListener onCharacteristicsListener);
     void subscribeNotificationHumidity(INotificationListener<Integer> notificationListener);
     void subscribeNotificationHumidity(INotificationListener<Integer> notificationListener, int period);
 
-    void readAmbientLight(OnCharacteristicsListener onCharacteristicsListener);
     void subscribeNotificationAmbientLight(INotificationListener<Integer> notificationListener);
     void subscribeNotificationAmbientLight(INotificationListener<Integer> notificationListener, int period);
 

@@ -38,29 +38,26 @@ package org.udoo.udooblulib.sensor;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 
-
 import org.udoo.udooblulib.utils.Point3D;
 
 import java.util.UUID;
 
-import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_ACC_CONF;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_ACC_DATA;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_ACC_SERV;
+import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_AMB_LIG_DATA;
+import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_AMB_LIG_SERV;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_BAR_ALTIT_DATA;
-import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_BAR_CONF;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_BAR_PRESS_DATA;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_BAR_SERV;
-import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_GYR_CONF;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_GYR_DATA;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_GYR_SERV;
-import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_IOPIN_ANALOG_READ;
-import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_IOPIN_SERV;
+import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_HUM_DATA;
+import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_HUM_SERV;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_KEY_DATA;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_KEY_SERV;
-import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_MAG_CONF;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_MAG_DATA;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_MAG_SERV;
-import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_TEM_CONF;
+import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_SENSOR_CONF;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_TEM_DATA;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_TEM_SERV;
 
@@ -70,7 +67,7 @@ import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_TEM_SERV;
  */
 public enum UDOOBLESensor {
 
-  ACCELEROMETER(UUID_ACC_SERV, UUID_ACC_DATA, UUID_ACC_CONF) {
+  ACCELEROMETER(UUID_ACC_SERV, UUID_ACC_DATA, UUID_SENSOR_CONF) {
   	@Override
   	public Point3D convert(final byte[] value) {
       float x = (float) ((short) ((value[1] << 8) | (value[0] & 0xff))) * 0.0024244f;
@@ -82,7 +79,7 @@ public enum UDOOBLESensor {
   },
 
 
-  MAGNETOMETER(UUID_MAG_SERV, UUID_MAG_DATA, UUID_MAG_CONF) {
+  MAGNETOMETER(UUID_MAG_SERV, UUID_MAG_DATA, UUID_SENSOR_CONF) {
     @Override
     public Point3D convert(final byte [] value) {
       // Multiply x and y with -1 so that the values correspond with the image in the app
@@ -94,7 +91,7 @@ public enum UDOOBLESensor {
     }
   },
 
-  GYROSCOPE(UUID_GYR_SERV, UUID_GYR_DATA, UUID_GYR_CONF) {
+  GYROSCOPE(UUID_GYR_SERV, UUID_GYR_DATA, UUID_SENSOR_CONF) {
     @Override
     public Point3D convert(final byte [] value) {
 
@@ -113,7 +110,7 @@ public enum UDOOBLESensor {
     }
   },
 
-  TEMPERATURE(UUID_TEM_SERV, UUID_TEM_DATA, UUID_TEM_CONF) {
+  TEMPERATURE(UUID_TEM_SERV, UUID_TEM_DATA, UUID_SENSOR_CONF) {
     @Override
     public int convertTemp(final byte[] value) {
       int rbit = (int) Constant.TemperatureTable[0][0];
@@ -124,7 +121,7 @@ public enum UDOOBLESensor {
     }
   },
 
-  BAROMETER_P(UUID_BAR_SERV, UUID_BAR_PRESS_DATA, UUID_BAR_CONF) {
+  BAROMETER_P(UUID_BAR_SERV, UUID_BAR_PRESS_DATA, UUID_SENSOR_CONF) {
     @Override
     public int convertBar(final byte[] value) {
 
@@ -134,13 +131,12 @@ public enum UDOOBLESensor {
     }
   },
 
-  BAROMETER_A(UUID_BAR_SERV, UUID_BAR_ALTIT_DATA, UUID_BAR_CONF) {
+  BAROMETER_A(UUID_BAR_SERV, UUID_BAR_ALTIT_DATA, UUID_SENSOR_CONF) {
     @Override
     public int convertBar(final byte[] value) {
       return ((value[2] << 16) | (value[1] << 8 & 0xff) | (value[0] & 0xffff));
     }
-//  },
-  };
+  },
 
 //  IOPIN(UUID_IOPIN_SERV, UUID_IOPIN_ANALOG_READ, UUID_IOPIN_ANALOG_CONF) {
 //    @Override
@@ -149,6 +145,25 @@ public enum UDOOBLESensor {
 //    }
 //  };
 
+  HUMIDITY(UUID_HUM_SERV, UUID_HUM_DATA, UUID_SENSOR_CONF) {
+    @Override
+    public int convertHumidity(final byte[] value) {
+      int rHum = (value[1] << 1 & 0xff) | (value[0]);
+      int rh = 125 * (rHum) / (655536 - 6);
+      if (rh < 0)
+        rh = 0;
+      else if (rh > 100)
+        rh = 100;
+      return rh;
+    }
+  },
+
+  AMBIENT_LIGHT(UUID_AMB_LIG_SERV, UUID_AMB_LIG_DATA, UUID_SENSOR_CONF) {
+    @Override
+    public int convertAmbientLight(final byte[] value) {
+      return (short) (value[1] << 8 & 0xff) | (value[0]);
+    }
+  };
 
   /**
    * Gyroscope, Magnetometer, Barometer, IR temperature all store 16 bit two's complement values in the awkward format LSB MSB, which cannot be directly parsed
@@ -189,6 +204,14 @@ public enum UDOOBLESensor {
   }
 
   public float convertADC(byte[] value) {
+    throw new UnsupportedOperationException("Programmer error, the individual enum classes are supposed to override this method.");
+  }
+
+  public int convertHumidity(byte[] value) {
+    throw new UnsupportedOperationException("Programmer error, the individual enum classes are supposed to override this method.");
+  }
+
+  public int convertAmbientLight(byte[] value) {
     throw new UnsupportedOperationException("Programmer error, the individual enum classes are supposed to override this method.");
   }
 

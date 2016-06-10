@@ -64,7 +64,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
      * 6 Light
      * 7 Reserved
      */
-    public enum SENSORS {ACC ,MAGN, GYRO,TEMP,BAR,HUM, LIG}
+    public enum SENSORS {ACC ,MAGN, GYRO,TEMP,BAR,HUM, AMB_LIG}
     boolean[] sensorsDetected = new boolean[8];
     boolean[] sensorsEnabled = new boolean[8];
 
@@ -133,7 +133,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
     }
 
 
-    private void readSensors(String address, OnCharacteristicsListener onCharacteristicsListener) {
+    private void readSensors(String address, IReaderListener readerListener) {
         if (isBluManagerReady) {
             UUID servUuid = UDOOBLE.UUID_IOPIN_SERV;
             UUID dataUuid = UDOOBLE.UUID_IOPIN_DIGITAL_DATA;
@@ -144,13 +144,19 @@ public class UdooBluManagerImpl implements UdooBluManager{
                 BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
 
                 mUdooBluService.readCharacteristic(address, charac);
-                mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
-
+                mIReaderListenerMap.put(address + charac.getUuid().toString(), readerListener);
             } else {
-                Log.i(TAG, "error not service for this CharacteristicModel");
+                if (readerListener != null)
+                    readerListener.onError(new UdooBluException(UdooBluException.BLU_SENSOR_NOT_FOUND));
             }
-        } else if (BuildConfig.DEBUG)
-            Log.i(TAG, "BluManager not ready");
+
+        } else {
+            if (BuildConfig.DEBUG)
+                Log.i(TAG, "BluManager not ready");
+
+            if (readerListener != null)
+                readerListener.onError(new UdooBluException(UdooBluException.BLU_SERVICE_NOT_READY));
+        }
     }
 //    public String connects(IBleDeviceListener iBleDeviceListener) {
 //        String address = "";
@@ -202,7 +208,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
                 BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
                 success = mUdooBluService.setCharacteristicNotification(address, charac, enable);
                 if (success) {
-                    mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
+//                    mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
                     Log.i(TAG, "enableNotifications service " + servUuid.toString() + " is null: ");
                 }
             }
@@ -211,33 +217,43 @@ public class UdooBluManagerImpl implements UdooBluManager{
         return success;
     }
 
+    @Override
     public boolean setNotificationPeriod(String address, UDOOBLESensor sensor) {
-        return setNotificationPeriod(address, sensor, Constant.NOTIFICATIONS_PERIOD);
+        return false;
     }
 
-    /* @param period is millisecond*/
+    @Override
     public boolean setNotificationPeriod(String address, UDOOBLESensor sensor, int period) {
-        boolean success = false;
-        if (isBluManagerReady) {
-            if (sensor != null) {
-                UUID servUuid = sensor.getService();
-                UUID confUuid = sensor.getConfig();
-
-                BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
-                BluetoothGattCharacteristic charac = null;
-                if (serv != null) {
-                    charac = serv.getCharacteristic(getCharacteristic(confUuid));
-                    byte value = (byte) period;
-                    byte[] msg = new byte[1];
-                    msg[0] = value;
-                    mUdooBluService.writeCharacteristic(address, charac, msg);
-                    Log.i(TAG, "enable notification period: " + value);
-                }
-            }
-        } else if (BuildConfig.DEBUG)
-            Log.i(TAG, "BluManager not ready");
-        return success;
+        return false;
     }
+//
+//    public boolean setNotificationPeriod(String address, UDOOBLESensor sensor) {
+//        return setNotificationPeriod(address, sensor, Constant.NOTIFICATIONS_PERIOD);
+//    }
+//
+//    /* @param period is millisecond*/
+//    public void setNotificationPeriod(String address, UDOOBLESensor sensor, int period) {
+////        boolean success = false;
+////        if (isBluManagerReady) {
+////            if (sensor != null) {
+////                UUID servUuid = sensor.getService();
+////                UUID confUuid = sensor.getConfig();
+////
+////                BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
+////                BluetoothGattCharacteristic charac = null;
+////                if (serv != null) {
+////                    charac = serv.getCharacteristic(getCharacteristic(confUuid));
+////                    byte value = (byte) period;
+////                    byte[] msg = new byte[1];
+////                    msg[0] = value;
+////                    mUdooBluService.writeCharacteristic(address, charac, msg);
+////                    Log.i(TAG, "enable notification period: " + value);
+////                }
+////            }
+////        } else if (BuildConfig.DEBUG)
+////            Log.i(TAG, "BluManager not ready");
+//        return success;
+//    }
 
     public void setIoPinMode(String address, final OnBluOperationResult<Boolean> onResultListener, IOPin... ioPins) {
         if (isBluManagerReady) {
@@ -302,7 +318,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
                 BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
 
                 mUdooBluService.readCharacteristic(address, charac);
-                mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
+//                mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
 
             } else {
                 Log.i(TAG, "error not service for this CharacteristicModel");
@@ -422,7 +438,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
         if (serv != null) {
             BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
             mUdooBluService.readCharacteristic(address, charac);
-            mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
+//            mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
         } else {
 
             if (onCharacteristicsListener != null)
@@ -463,7 +479,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
     private void configPwm(final String address, IOPin.IOPIN_PIN pin, final int freq, final int dutyCycle, OnBluOperationResult<Boolean> resultListener){
         UUID servUuid = UDOOBLE.UUID_IOPIN_SERV;
-        UUID dataUuid = UDOOBLE.UUID_IOPIN_PWM_CONF;
+        UUID dataUuid = UDOOBLE.UUID_SENSOR_CONF;
         byte msg[] = new byte[5];
         if (freq >= 3 && freq <= 24000000) {
             byte freqs[] = BitUtility.ToBytes(freq);
@@ -543,14 +559,12 @@ public class UdooBluManagerImpl implements UdooBluManager{
         return false;
     }
 
-    @Override
-    public void readAccelerometer(final String address, final IReaderListener<Point3D> readerListener) {
+    private void readSensor(final String address, final IReaderListener readerListener, final SENSORS sensor, final UDOOBLESensor udoobleSensor){
         if (isBluManagerReady) {
-            int sensVer = sensorVerifier(SENSORS.ACC);
+            int sensVer = sensorVerifier(sensor);
             if (sensVer == 1) {
-                UDOOBLESensor sensor = UDOOBLESensor.ACCELEROMETER;
-                UUID servUuid = sensor.getService();
-                UUID dataUuid = sensor.getData();
+                UUID servUuid = udoobleSensor.getService();
+                UUID dataUuid = udoobleSensor.getData();
                 BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
 
                 if (serv != null) {
@@ -567,7 +581,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
                     public void onSuccess(Boolean aBoolean) {
                         if(aBoolean){
                             sensorsEnabled[SENSORS.ACC.ordinal()] = true;
-                            readAccelerometer(address, readerListener);
+                            readSensor(address, readerListener, sensor, udoobleSensor);
                         }else {
                             if(readerListener != null)
                                 readerListener.onError(new UdooBluException(UdooBluException.BLU_READ_CHARAC_ERROR));
@@ -585,8 +599,49 @@ public class UdooBluManagerImpl implements UdooBluManager{
                 if(readerListener != null)
                     readerListener.onError(new UdooBluException(UdooBluException.BLU_SENSOR_NOT_FOUND));
             }
-        } else if (BuildConfig.DEBUG)
-            Log.i(TAG, "BluManager not ready");
+        } else{
+            if (BuildConfig.DEBUG)
+                Log.i(TAG, "BluManager not ready");
+
+            if(readerListener != null)
+                readerListener.onError(new UdooBluException(UdooBluException.BLU_SERVICE_NOT_READY));
+        }
+    }
+
+    @Override
+    public void readAccelerometer(String address, IReaderListener<Point3D> readerListener) {
+        readSensor(address, readerListener, SENSORS.ACC, UDOOBLESensor.ACCELEROMETER);
+    }
+
+    @Override
+    public void readGyroscope(String address, IReaderListener<Point3D> readerListener) {
+        readSensor(address, readerListener, SENSORS.GYRO, UDOOBLESensor.GYROSCOPE);
+    }
+
+    @Override
+    public void readMagnetometer(String address, IReaderListener<Point3D> readerListener) {
+        readSensor(address, readerListener, SENSORS.MAGN, UDOOBLESensor.MAGNETOMETER);
+    }
+
+    @Override
+    public void readBarometer(String address, IReaderListener<Integer> readerListener) {
+        readSensor(address, readerListener, SENSORS.BAR, UDOOBLESensor.BAROMETER_P);
+    }
+
+    @Override
+    public void readTemperature(String address, IReaderListener<Float> readerListener) {
+        readSensor(address, readerListener, SENSORS.TEMP, UDOOBLESensor.TEMPERATURE);
+    }
+
+
+    @Override
+    public void readHumidity(String address, IReaderListener<Float> readerListener) {
+        readSensor(address, readerListener, SENSORS.HUM, UDOOBLESensor.HUMIDITY);
+    }
+
+    @Override
+    public void readAmbientLight(String address, IReaderListener<Float> readerListener) {
+        readSensor(address, readerListener, SENSORS.AMB_LIG, UDOOBLESensor.AMBIENT_LIGHT);
     }
 
     @Override
@@ -599,10 +654,6 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
     }
 
-    @Override
-    public void readGyroscope(IReaderListener<Point3D> readerListener) {
-
-    }
 
     @Override
     public void subscribeNotificationGyroscope(INotificationListener<Point3D> notificationListener) {
@@ -614,10 +665,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
     }
 
-    @Override
-    public void readMagnetometer(IReaderListener<Point3D> readerListener) {
 
-    }
 
     @Override
     public void subscribeNotificationMagnetometer(INotificationListener<Integer> notificationListener) {
@@ -629,10 +677,6 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
     }
 
-    @Override
-    public void readBarometer(IReaderListener<Integer> readerListener) {
-
-    }
 
     @Override
     public void subscribeNotificationBarometer(INotificationListener<Integer> notificationListener) {
@@ -641,11 +685,6 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
     @Override
     public void subscribeNotificationBarometer(INotificationListener<Integer> notificationListener, int period) {
-
-    }
-
-    @Override
-    public void readTemparature(IReaderListener<Float> onCharacteristicsListener) {
 
     }
 
@@ -660,11 +699,6 @@ public class UdooBluManagerImpl implements UdooBluManager{
     }
 
     @Override
-    public void readHumidity(OnCharacteristicsListener onCharacteristicsListener) {
-
-    }
-
-    @Override
     public void subscribeNotificationHumidity(INotificationListener<Integer> notificationListener) {
 
     }
@@ -674,10 +708,6 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
     }
 
-    @Override
-    public void readAmbientLight(OnCharacteristicsListener onCharacteristicsListener) {
-
-    }
 
     @Override
     public void subscribeNotificationAmbientLight(INotificationListener<Integer> notificationListener) {
@@ -741,20 +771,25 @@ public class UdooBluManagerImpl implements UdooBluManager{
                     if (mDeviceListenerMap.containsKey(address)) {
                         mUdooBluService.bond(address);
 
-                        readSensors(address, new OnCharacteristicsListener() {
+                        readSensors(address, new IReaderListener() {
                             @Override
-                            public void onCharacteristicsRead(String uuidStr, byte[] value, int status) {
-                                for(int i = 0; i<value.length; i++){
-                                    sensorsDetected[i] = (value[0] << i) == 1;
-                                }
-
+                            public void oRead(Object rawvalue) {
                                 IBleDeviceListener iBleDeviceListener = mDeviceListenerMap.get(address);
-                                if (iBleDeviceListener != null)
-                                    iBleDeviceListener.onDeviceConnected();
-                            }
 
-                            @Override
-                            public void onCharacteristicChanged(String uuidStr, byte[] rawValue) {}
+                                if (rawvalue instanceof byte[]) {
+                                    byte[] value = (byte[]) rawvalue;
+                                    for (int i = 0; i < value.length; i++) {
+                                        sensorsDetected[i] = (value[0] << i) == 1;
+                                    }
+
+                                    if (iBleDeviceListener != null)
+                                        iBleDeviceListener.onDeviceConnected();
+
+                                }else{
+                                    if (iBleDeviceListener != null)
+                                        iBleDeviceListener.onError(new UdooBluException(UdooBluException.BLU_GENERIC_ERROR));
+                                }
+                            }
 
                             @Override
                             public void onError(UdooBluException e) {
@@ -772,13 +807,12 @@ public class UdooBluManagerImpl implements UdooBluManager{
                     UdooBluService.ACTION_DATA_WRITE.equals(action) ||
                     UdooBluService.ACTION_DATA_READ.equals(action))) {
                 String keySearch = address + uuidStr;
-                if (mOnCharacteristicsListenerMap.containsKey(keySearch)) {
-                    OnCharacteristicsListener onCharacteristicsListener = mOnCharacteristicsListenerMap.get(keySearch);
 
                     if (UdooBluService.ACTION_DATA_NOTIFY.equals(action)) {
                         // Notification
-                        if (onCharacteristicsListener != null)
-                            onCharacteristicsListener.onCharacteristicChanged(uuidStr, value);
+                        INotificationListener iNotificationListener = mINotificationListenerMap.get(keySearch);
+                        if (iNotificationListener != null)
+                            iNotificationListener.onNext(value);
 
                     } else if (UdooBluService.ACTION_DATA_WRITE.equals(action)) {
                         if(mOnResultMap.containsKey(address)){
@@ -794,14 +828,19 @@ public class UdooBluManagerImpl implements UdooBluManager{
                             }
                         }
                     } else if (UdooBluService.ACTION_DATA_READ.equals(action)) {
-                        if (onCharacteristicsListener != null)
-                            onCharacteristicsListener.onCharacteristicsRead(uuidStr, value, status);
+                        IReaderListener iReaderListener = mIReaderListenerMap.get(keySearch);
+                        if (iReaderListener != null){
+                            if(status == BluetoothGatt.GATT_SUCCESS)
+                                iReaderListener.oRead(value);
+                            else
+                                iReaderListener.onError(new UdooBluException(UdooBluException.BLU_READ_CHARAC_ERROR));
+                        }
                     }
                 }
             }
-        }
 
-    };
+        };
+
 
     private static IntentFilter makeGattUpdateIntentFilter() {
         final IntentFilter fi = new IntentFilter();
@@ -813,20 +852,20 @@ public class UdooBluManagerImpl implements UdooBluManager{
         return fi;
     }
 
-    private UUID getCharacteristic(UUID confUuid) {
-        UUID characteristic = null;
-
-        if (confUuid.equals(UDOOBLE.UUID_ACC_CONF)) {
-            characteristic = UDOOBLE.UUID_ACC_PERI;
-        } else if (confUuid.equals(UDOOBLE.UUID_MAG_CONF)) {
-            characteristic = UDOOBLE.UUID_MAG_PERI;
-        } else if (confUuid.equals(UDOOBLE.UUID_GYR_CONF)) {
-            characteristic = UDOOBLE.UUID_GYR_PERI;
-        } else if (confUuid.equals(UDOOBLE.UUID_TEM_CONF)) {
-            characteristic = UDOOBLE.UUID_TEM_PERI;
-        }
-        return characteristic;
-    }
+//    private UUID getCharacteristic(UUID confUuid) {
+//        UUID characteristic = null;
+//
+//        if (confUuid.equals(UDOOBLE.UUID_ACC_CONF)) {
+//            characteristic = UDOOBLE.UUID_ACC_PERI;
+//        } else if (confUuid.equals(UDOOBLE.UUID_MAG_CONF)) {
+//            characteristic = UDOOBLE.UUID_MAG_PERI;
+//        } else if (confUuid.equals(UDOOBLE.UUID_GYR_CONF)) {
+//            characteristic = UDOOBLE.UUID_GYR_PERI;
+//        } else if (confUuid.equals(UDOOBLE.UUID_TEM_CONF)) {
+//            characteristic = UDOOBLE.UUID_TEM_PERI;
+//        }
+//        return characteristic;
+//    }
 
     public boolean discoveryServices(String address) {
         if (isBluManagerReady) {
