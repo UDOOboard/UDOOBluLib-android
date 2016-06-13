@@ -42,6 +42,7 @@ import org.udoo.udooblulib.interfaces.OnBluOperationResult;
 import org.udoo.udooblulib.interfaces.OnResult;
 import org.udoo.udooblulib.scan.BluScanCallBack;
 import org.udoo.udooblulib.sensor.Constant;
+import org.udoo.udooblulib.sensor.UDOOBLE;
 import org.udoo.udooblulib.sensor.UDOOBLESensor;
 import org.udoo.udooblulib.utils.SeqObserverQueue;
 
@@ -439,18 +440,19 @@ public class UdooBluService extends Service {
     }
 
     public void scanLeDevice(final boolean enable, final BluScanCallBack scanCallback) {
-//        List<ScanFilter> scanFilters = new ArrayList<>();
-//        ScanFilter scanFilter =new ScanFilter.Builder().setServiceUuid(new ParcelUuid((UUID.fromString(Constant.BASE_UUID)))).build();
-//        scanFilters.add(scanFilter);
+        List<ScanFilter> scanFilters = new ArrayList<>();
+        ScanFilter scanFilter =new ScanFilter.Builder().setServiceUuid(new ParcelUuid(UDOOBLE.UUID_SENSORS_SERV)).build();
+        scanFilters.add(scanFilter);
 
-        UdooBluException udooBluException = checkBluetooth(getBaseContext());
+        ScanSettings scanSettings = new ScanSettings.Builder().build();
+        UdooBluException udooBluException = checkBluetooth(getApplicationContext());
         if (udooBluException != null) {
             if (scanCallback != null)
                 scanCallback.onError(udooBluException);
         } else {
             mLEScanner = mBtAdapter.getBluetoothLeScanner();
             if (enable && mScanning.compareAndSet(false, true)){
-                mLEScanner.startScan(scanCallback);
+                mLEScanner.startScan(scanFilters, scanSettings, scanCallback);
                 Handler handler = new Handler();
                 handler.postDelayed(new Runnable() {
                     @Override
@@ -478,7 +480,7 @@ public class UdooBluService extends Service {
      * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)} callback.
      */
     public void connect(final String address, IBleDeviceListener iBleDeviceListener) {
-        UdooBluException udooBluException = checkBluetooth(getBaseContext());
+        UdooBluException udooBluException = checkBluetooth(getApplicationContext());
         if (udooBluException != null) {
             if (iBleDeviceListener != null)
                 iBleDeviceListener.onError(udooBluException);
@@ -649,9 +651,9 @@ public class UdooBluService extends Service {
                 udooBluException = new UdooBluException(UdooBluException.BLUETOOTH_DISABLED);
 
             else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (isLocationPermissionApproved(context))
+                if (!isLocationPermissionApproved(context))
                     udooBluException = new UdooBluException(UdooBluException.LOCATION_PERMISSION_MISSING);
-                else if (isLocationProviderEnabled((LocationManager) context.getSystemService(Context.LOCATION_SERVICE)))
+                else if (!isLocationProviderEnabled((LocationManager) context.getSystemService(Context.LOCATION_SERVICE)))
                     udooBluException = new UdooBluException(UdooBluException.LOCATION_SERVICES_DISABLED);
             }
         }
@@ -669,6 +671,6 @@ public class UdooBluService extends Service {
     }
 
     private boolean isPermissionGranted(String permission, Context context) {
-        return ContextCompat.checkSelfPermission(getApplicationContext(), permission) == PackageManager.PERMISSION_GRANTED;
+        return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED;
     }
 }
