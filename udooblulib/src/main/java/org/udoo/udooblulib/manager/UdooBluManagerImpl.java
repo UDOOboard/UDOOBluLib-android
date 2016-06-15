@@ -65,8 +65,8 @@ public class UdooBluManagerImpl implements UdooBluManager{
      * 7 Reserved
      */
     public enum SENSORS {ACC ,MAGN, GYRO,TEMP,BAR,HUM, AMB_LIG}
-    boolean[] sensorsDetected = new boolean[8];
-    boolean[] sensorsEnabled = new boolean[8];
+    private boolean[] sensorsDetected = new boolean[8];
+    private boolean[] sensorsEnabled = new boolean[8];
 
     public interface IBluManagerCallback {
         void onBluManagerReady();
@@ -135,8 +135,8 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
     private void readSensors(String address, IReaderListener readerListener) {
         if (isBluManagerReady) {
-            UUID servUuid = UDOOBLE.UUID_IOPIN_SERV;
-            UUID dataUuid = UDOOBLE.UUID_IOPIN_DIGITAL_DATA;
+            UUID servUuid = UDOOBLE.UUID_SENSORS_SERV;
+            UUID dataUuid = UDOOBLE.UUID_SENSOR_DATA;
 
             BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
 
@@ -778,8 +778,8 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
                                 if (rawvalue instanceof byte[]) {
                                     byte[] value = (byte[]) rawvalue;
-                                    for (int i = 0; i < value.length; i++) {
-                                        sensorsDetected[i] = (value[0] << i) == 1;
+                                    for (int i = 0; i < sensorsDetected.length; i++) {
+                                        sensorsDetected[i] = (value[0] & (1 << i)) > 0;
                                     }
 
                                     if (iBleDeviceListener != null)
@@ -873,6 +873,11 @@ public class UdooBluManagerImpl implements UdooBluManager{
         } else if (BuildConfig.DEBUG)
             Log.i(TAG, "BluManager not ready");
         return false;
+    }
+
+    @Override
+    public boolean[] getSensorDetected() {
+        return sensorsDetected;
     }
 
     public void disconnect(String address){

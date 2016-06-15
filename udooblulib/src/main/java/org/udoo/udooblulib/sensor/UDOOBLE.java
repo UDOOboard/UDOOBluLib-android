@@ -19,6 +19,7 @@ public class UDOOBLE {
 
     UUID_SENSORS_SERV                = fromString("d7728bf3-79c6-452f-994c-9829da1a4229"),
             UUID_SENSOR_CONF = fromString("d772c043-79c6-452f-994c-9829da1a4229"),
+            UUID_SENSOR_DATA = fromString("d772dd91-79c6-452f-994c-9829da1a4229"),
             UUID_NOTIFICATION_PERI   = fromString("d77215f4-79c6-452f-994c-9829da1a4229"), // Period in tens of milliseconds
 
 

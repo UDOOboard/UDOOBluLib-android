@@ -25,7 +25,7 @@ public interface UdooBluManager {
     void disconnect(String address);
     boolean bond(String address);
     boolean discoveryServices(String address);
-
+    boolean [] getSensorDetected();
     boolean enableNotification(String address, boolean enable, UDOOBLESensor sensor, OnCharacteristicsListener onCharacteristicsListener);
     boolean setNotificationPeriod(String address, UDOOBLESensor sensor);
     boolean setNotificationPeriod(String address, UDOOBLESensor sensor, int period);
