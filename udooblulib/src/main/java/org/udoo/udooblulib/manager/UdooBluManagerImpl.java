@@ -45,7 +45,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
     private UdooBluService mUdooBluService;
     private HashMap<String, OnBluOperationResult<Boolean>> mOnResultMap;
     private HashMap<String, IBleDeviceListener> mDeviceListenerMap;
-    private HashMap<String, IReaderListener> mIReaderListenerMap;
+    private HashMap<String, IReaderListener<byte[]>> mIReaderListenerMap;
     private HashMap<String, INotificationListener> mINotificationListenerMap;
     private boolean isBluManagerReady;
     private Handler mHandler;
@@ -133,7 +133,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
     }
 
 
-    private void readSensors(String address, IReaderListener readerListener) {
+    private void readSensors(String address, IReaderListener<byte []> readerListener) {
         if (isBluManagerReady) {
             UUID servUuid = UDOOBLE.UUID_SENSORS_SERV;
             UUID dataUuid = UDOOBLE.UUID_SENSOR_DATA;
@@ -559,7 +559,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
         return false;
     }
 
-    private void readSensor(final String address, final IReaderListener readerListener, final SENSORS sensor, final UDOOBLESensor udoobleSensor){
+    private void readSensor(final String address, final IReaderListener<byte[]> readerListener, final SENSORS sensor, final UDOOBLESensor udoobleSensor){
         if (isBluManagerReady) {
             int sensVer = sensorVerifier(sensor);
             if (sensVer == 1) {
@@ -576,11 +576,11 @@ public class UdooBluManagerImpl implements UdooBluManager{
                         readerListener.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
                 }
             } else if (sensVer == 0) {
-                enableSensor(address, UDOOBLESensor.ACCELEROMETER, true, new OnBluOperationResult<Boolean>() {
+                enableSensor(address, udoobleSensor, true, new OnBluOperationResult<Boolean>() {
                     @Override
                     public void onSuccess(Boolean aBoolean) {
                         if(aBoolean){
-                            sensorsEnabled[SENSORS.ACC.ordinal()] = true;
+                            sensorsEnabled[sensor.ordinal()] = true;
                             readSensor(address, readerListener, sensor, udoobleSensor);
                         }else {
                             if(readerListener != null)
@@ -609,38 +609,38 @@ public class UdooBluManagerImpl implements UdooBluManager{
     }
 
     @Override
-    public void readAccelerometer(String address, IReaderListener<Point3D> readerListener) {
+    public void readAccelerometer(String address, IReaderListener<byte[]> readerListener) {
         readSensor(address, readerListener, SENSORS.ACC, UDOOBLESensor.ACCELEROMETER);
     }
 
     @Override
-    public void readGyroscope(String address, IReaderListener<Point3D> readerListener) {
+    public void readGyroscope(String address, IReaderListener<byte[]> readerListener) {
         readSensor(address, readerListener, SENSORS.GYRO, UDOOBLESensor.GYROSCOPE);
     }
 
     @Override
-    public void readMagnetometer(String address, IReaderListener<Point3D> readerListener) {
+    public void readMagnetometer(String address, IReaderListener<byte[]> readerListener) {
         readSensor(address, readerListener, SENSORS.MAGN, UDOOBLESensor.MAGNETOMETER);
     }
 
     @Override
-    public void readBarometer(String address, IReaderListener<Integer> readerListener) {
+    public void readBarometer(String address, IReaderListener<byte[]> readerListener) {
         readSensor(address, readerListener, SENSORS.BAR, UDOOBLESensor.BAROMETER_P);
     }
 
     @Override
-    public void readTemperature(String address, IReaderListener<Float> readerListener) {
+    public void readTemperature(String address, IReaderListener<byte[]> readerListener) {
         readSensor(address, readerListener, SENSORS.TEMP, UDOOBLESensor.TEMPERATURE);
     }
 
 
     @Override
-    public void readHumidity(String address, IReaderListener<Float> readerListener) {
+    public void readHumidity(String address, IReaderListener<byte[]> readerListener) {
         readSensor(address, readerListener, SENSORS.HUM, UDOOBLESensor.HUMIDITY);
     }
 
     @Override
-    public void readAmbientLight(String address, IReaderListener<Float> readerListener) {
+    public void readAmbientLight(String address, IReaderListener<byte[]> readerListener) {
         readSensor(address, readerListener, SENSORS.AMB_LIG, UDOOBLESensor.AMBIENT_LIGHT);
     }
 
@@ -771,24 +771,17 @@ public class UdooBluManagerImpl implements UdooBluManager{
                     if (mDeviceListenerMap.containsKey(address)) {
                         mUdooBluService.bond(address);
 
-                        readSensors(address, new IReaderListener() {
+                        readSensors(address, new IReaderListener<byte[]>() {
                             @Override
-                            public void oRead(Object rawvalue) {
+                            public void oRead(byte[] value) {
                                 IBleDeviceListener iBleDeviceListener = mDeviceListenerMap.get(address);
 
-                                if (rawvalue instanceof byte[]) {
-                                    byte[] value = (byte[]) rawvalue;
-                                    for (int i = 0; i < sensorsDetected.length; i++) {
-                                        sensorsDetected[i] = (value[0] & (1 << i)) > 0;
-                                    }
-
-                                    if (iBleDeviceListener != null)
-                                        iBleDeviceListener.onDeviceConnected();
-
-                                }else{
-                                    if (iBleDeviceListener != null)
-                                        iBleDeviceListener.onError(new UdooBluException(UdooBluException.BLU_GENERIC_ERROR));
+                                for (int i = 0; i < sensorsDetected.length; i++) {
+                                    sensorsDetected[i] = (value[0] & (1 << i)) > 0;
                                 }
+
+                                if (iBleDeviceListener != null)
+                                    iBleDeviceListener.onDeviceConnected();
                             }
 
                             @Override
@@ -828,7 +821,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
                             }
                         }
                     } else if (UdooBluService.ACTION_DATA_READ.equals(action)) {
-                        IReaderListener iReaderListener = mIReaderListenerMap.get(keySearch);
+                        IReaderListener<byte[]> iReaderListener = mIReaderListenerMap.get(keySearch);
                         if (iReaderListener != null){
                             if(status == BluetoothGatt.GATT_SUCCESS)
                                 iReaderListener.oRead(value);

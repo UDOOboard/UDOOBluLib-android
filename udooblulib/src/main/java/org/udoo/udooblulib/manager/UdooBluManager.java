@@ -38,13 +38,13 @@ public interface UdooBluManager {
     boolean analogRead(IOPin.IOPIN_PIN pin);
 
 
-    void readAccelerometer(String address, IReaderListener<Point3D> readerListener);
-    void readGyroscope(String address, IReaderListener<Point3D> readerListener);
-    void readMagnetometer(String address, IReaderListener<Point3D> readerListener);
-    void readBarometer(String address, IReaderListener<Integer> readerListener);
-    void readTemperature(String address, IReaderListener<Float> onCharacteristicsListener);
-    void readHumidity(String address, IReaderListener<Float> onCharacteristicsListener);
-    void readAmbientLight(String address, IReaderListener<Float> onCharacteristicsListener);
+    void readAccelerometer(String address, IReaderListener<byte[]> readerListener);
+    void readGyroscope(String address, IReaderListener<byte[]> readerListener);
+    void readMagnetometer(String address, IReaderListener<byte[]> readerListener);
+    void readBarometer(String address, IReaderListener<byte[]> readerListener);
+    void readTemperature(String address, IReaderListener<byte[]> onCharacteristicsListener);
+    void readHumidity(String address, IReaderListener<byte[]> onCharacteristicsListener);
+    void readAmbientLight(String address, IReaderListener<byte[]> onCharacteristicsListener);
 
     void subscribeNotificationAccelerometer(String address, INotificationListener<Point3D> notificationListener);
     void subscribeNotificationAccelerometer(String address, INotificationListener<Point3D> notificationListener, int period);

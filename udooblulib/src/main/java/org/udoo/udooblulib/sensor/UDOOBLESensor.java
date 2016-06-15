@@ -148,7 +148,7 @@ public enum UDOOBLESensor {
   HUMIDITY(UUID_HUM_SERV, UUID_HUM_DATA, UUID_SENSOR_CONF) {
     @Override
     public int convertHumidity(final byte[] value) {
-      int rHum = (value[1] << 1 & 0xff) | (value[0]);
+      int rHum = ((short) ((value[1] << 1) | (value[0] & 0xff)));
       int rh = 125 * (rHum) / (655536 - 6);
       if (rh < 0)
         rh = 0;
@@ -161,7 +161,7 @@ public enum UDOOBLESensor {
   AMBIENT_LIGHT(UUID_AMB_LIG_SERV, UUID_AMB_LIG_DATA, UUID_SENSOR_CONF) {
     @Override
     public int convertAmbientLight(final byte[] value) {
-      return (short) (value[1] << 8 & 0xff) | (value[0]);
+      return ((short) ((value[1] << 8) | (value[0] & 0xff)));
     }
   };
 
