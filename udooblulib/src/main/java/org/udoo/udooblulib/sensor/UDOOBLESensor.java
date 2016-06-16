@@ -148,8 +148,8 @@ public enum UDOOBLESensor {
   HUMIDITY(UUID_HUM_SERV, UUID_HUM_DATA, UUID_SENSOR_CONF) {
     @Override
     public int convertHumidity(final byte[] value) {
-      int rHum = ((short) ((value[1] << 1) | (value[0] & 0xff)));
-      int rh = 125 * (rHum) / (655536 - 6);
+      int rHum = ((short) (value[1] << 8 & 0xf000) | (value[0] & 0xff));
+      int rh = 125 * (rHum) / 65536 - 6;
       if (rh < 0)
         rh = 0;
       else if (rh > 100)
