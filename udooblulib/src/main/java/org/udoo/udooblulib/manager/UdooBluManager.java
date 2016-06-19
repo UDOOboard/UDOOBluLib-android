@@ -33,11 +33,10 @@ public interface UdooBluManager {
     boolean turnLed(String address, int color, byte func, int millis);
 
     void setIoPinMode(String address, final OnBluOperationResult<Boolean> onResultListener, IOPin... ioPins);
-    boolean digitalWrite(IOPin.IOPIN_PIN pin, IOPin.IOPIN_DIGITAL_VALUE value);
-    boolean digitalRead(IOPin.IOPIN_PIN pin);
+    public void digitalWrite(final String address,  final OnBluOperationResult<Boolean> onBluOperationResult, final IOPin... ioPins);
     boolean analogRead(IOPin.IOPIN_PIN pin);
 
-
+    void readDigital(String address, IReaderListener<byte[]> readerListener, IOPin... pin);
     void readAccelerometer(String address, IReaderListener<byte[]> readerListener);
     void readGyroscope(String address, IReaderListener<byte[]> readerListener);
     void readMagnetometer(String address, IReaderListener<byte[]> readerListener);

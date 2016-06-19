@@ -53,6 +53,8 @@ import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_GYR_DATA;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_GYR_SERV;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_HUM_DATA;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_HUM_SERV;
+import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_IOPIN_DIGITAL_DATA;
+import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_IOPIN_SERV;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_KEY_DATA;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_KEY_SERV;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_MAG_DATA;
@@ -138,12 +140,25 @@ public enum UDOOBLESensor {
     }
   },
 
-//  IOPIN(UUID_IOPIN_SERV, UUID_IOPIN_ANALOG_READ, UUID_IOPIN_ANALOG_CONF) {
+  IOPINDIGITAL(UUID_IOPIN_SERV, UUID_IOPIN_DIGITAL_DATA, UUID_SENSOR_CONF) {
+    @Override
+    public boolean[] convertIOPinDigital(final byte[] value) {
+      boolean[] iopin = new boolean[8];
+      for (int i = 0; i < 8; i++) {
+        iopin[i] = ((value[0] >> i) == 1);
+      }
+      return iopin;
+    }
+  },
+
+
+//  IOPIN(UUID_IOPIN_SERV, UUID_IOPIN_DIGITAL_DATA, UUID_SENSOR_CONF) {
 //    @Override
 //    public float convertADC(final byte[] value) {
 //      return (float) ((short) ((value[1] << 8) | (value[0] & 0xff)));
 //    }
-//  };
+//  },
+
 
   HUMIDITY(UUID_HUM_SERV, UUID_HUM_DATA, UUID_SENSOR_CONF) {
     @Override
@@ -200,6 +215,10 @@ public enum UDOOBLESensor {
   }
 
   public int convertBar(byte[] value) {
+    throw new UnsupportedOperationException("Programmer error, the individual enum classes are supposed to override this method.");
+  }
+
+  public boolean[] convertIOPinDigital(byte[] value) {
     throw new UnsupportedOperationException("Programmer error, the individual enum classes are supposed to override this method.");
   }
 
