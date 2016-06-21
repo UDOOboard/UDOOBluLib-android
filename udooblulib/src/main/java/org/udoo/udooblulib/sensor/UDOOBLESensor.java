@@ -56,6 +56,7 @@ import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_GYR_DATA;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_GYR_SERV;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_HUM_DATA;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_HUM_SERV;
+import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_IOPIN_ANALOG_READ;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_IOPIN_DIGITAL_DATA;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_IOPIN_SERV;
 import static org.udoo.udooblulib.sensor.UDOOBLE.UUID_KEY_DATA;
@@ -143,7 +144,7 @@ public enum UDOOBLESensor {
     }
   },
 
-  IOPINDIGITAL(UUID_IOPIN_SERV, UUID_IOPIN_DIGITAL_DATA, UUID_SENSOR_CONF) {
+  IOPIN_DIGITAL(UUID_IOPIN_SERV, UUID_IOPIN_DIGITAL_DATA, UUID_SENSOR_CONF) {
     @Override
     public boolean[] convertIOPinDigital(final byte[] value, IOPin... pins) {
       boolean[] iopin = new boolean[pins.length];
@@ -157,12 +158,12 @@ public enum UDOOBLESensor {
   },
 
 
-//  IOPIN(UUID_IOPIN_SERV, UUID_IOPIN_DIGITAL_DATA, UUID_SENSOR_CONF) {
-//    @Override
-//    public float convertADC(final byte[] value) {
-//      return (float) ((short) ((value[1] << 8) | (value[0] & 0xff)));
-//    }
-//  },
+  IOPIN_ANALOG(UUID_IOPIN_SERV, UUID_IOPIN_ANALOG_READ, UUID_SENSOR_CONF) {
+    @Override
+    public float convertADC(final byte[] value) {
+      return (float) ((short) ((value[1] << 8) | (value[0] & 0xff)));
+    }
+  },
 
 
   HUMIDITY(UUID_HUM_SERV, UUID_HUM_DATA, UUID_SENSOR_CONF) {

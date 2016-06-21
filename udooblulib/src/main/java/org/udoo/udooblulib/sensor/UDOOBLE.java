@@ -28,7 +28,9 @@ public class UDOOBLE {
             UUID_IOPIN_PIN_MODE     = fromString("d772ace2-79c6-452f-994c-9829da1a4229"),
             UUID_IOPIN_DIGITAL_DATA = fromString("d7726bcf-79c6-452f-994c-9829da1a4229"), // 8 bit - 0: low, 1: high (0:A0...7:D7)
             UUID_IOPIN_ANALOG_READ  = fromString("d772233a-79c6-452f-994c-9829da1a4229"), //
-            UUID_IOPIN_PWM_ANALOG_INDEX     = fromString("d7720955-79c6-452f-994c-9829da1a4229"),
+            UUID_IOPIN_PWM_ANALOG_INDEX     = fromString("d77200e2-79c6-452f-994c-9829da1a4229"),
+            UUID_IOPIN_PWM_CONFIG   = fromString("d7720955-79c6-452f-994c-9829da1a4229"),
+
     /* LED */
     UUID_LED_SERV = fromString("d772e605-79c6-452f-994c-9829da1a4229"),
             UUID_LED_RED = fromString("d772aed4-79c6-452f-994c-9829da1a4229"),
