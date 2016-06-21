@@ -37,7 +37,10 @@ package org.udoo.udooblulib.sensor;
 //import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT8;
 
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.util.Log;
 
+import org.udoo.udooblulib.model.IOPin;
+import org.udoo.udooblulib.utils.BitUtility;
 import org.udoo.udooblulib.utils.Point3D;
 
 import java.util.UUID;
@@ -142,10 +145,12 @@ public enum UDOOBLESensor {
 
   IOPINDIGITAL(UUID_IOPIN_SERV, UUID_IOPIN_DIGITAL_DATA, UUID_SENSOR_CONF) {
     @Override
-    public boolean[] convertIOPinDigital(final byte[] value) {
-      boolean[] iopin = new boolean[8];
-      for (int i = 0; i < 8; i++) {
-        iopin[i] = ((value[0] >> i) == 1);
+    public boolean[] convertIOPinDigital(final byte[] value, IOPin... pins) {
+      boolean[] iopin = new boolean[pins.length];
+      BitUtility.LogBinValue(value, false);
+      for (int i = 0; i < pins.length; i++) {
+        short pinVal = (short) (1 << pins[i].getPinValue());
+        iopin[i] = (value[0] & pinVal) == pinVal;
       }
       return iopin;
     }
@@ -218,7 +223,7 @@ public enum UDOOBLESensor {
     throw new UnsupportedOperationException("Programmer error, the individual enum classes are supposed to override this method.");
   }
 
-  public boolean[] convertIOPinDigital(byte[] value) {
+  public boolean[] convertIOPinDigital(final byte[] value, IOPin... pin){
     throw new UnsupportedOperationException("Programmer error, the individual enum classes are supposed to override this method.");
   }
 

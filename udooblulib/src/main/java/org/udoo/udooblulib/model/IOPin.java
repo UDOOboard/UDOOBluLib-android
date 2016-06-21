@@ -100,28 +100,28 @@ public class IOPin {
 
         switch (pin) {
             case D7:
-                value = BitUtility.ToUnsignedByte(128);
+                value = 7;
                 break;
             case D6:
-                value = 64;
+                value = 6;
                 break;
             case A5:
-                value = 32;
+                value = 5;
                 break;
             case A4:
-                value = 16;
-                break;
-            case A3:
-                value = 8;
-                break;
-            case A2:
                 value = 4;
                 break;
-            case A1:
+            case A3:
+                value = 3;
+                break;
+            case A2:
                 value = 2;
                 break;
-            case A0:
+            case A1:
                 value = 1;
+                break;
+            case A0:
+                value = 0;
                 break;
         }
         return value;

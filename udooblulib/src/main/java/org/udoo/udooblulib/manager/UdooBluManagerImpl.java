@@ -280,11 +280,11 @@ public class UdooBluManagerImpl implements UdooBluManager{
                 switch (ioPin.pin) {
                     case D7:
                     case A3:
-                        shift = 4;
+                        shift = 6;
                         break;
                     case D6:
                     case A2:
-                        shift = 3;
+                        shift = 4;
                         break;
                     case A5:
                     case A1:
@@ -292,13 +292,15 @@ public class UdooBluManagerImpl implements UdooBluManager{
                         break;
                     case A4:
                     case A0:
-                        shift = 1;
+                        shift = 0;
                         break;
                 }
-                byte value = (byte) ((mode << shift) | 0xff);
-                int idx = ioPin.getPinValue() >= 16 ? 1 : 0;
+                byte value = (byte) ((mode << shift) & 0xff);
+                int idx = ioPin.getPinValue() >= 4 ? 1 : 0;
                 msg[idx] = (byte) (msg[idx] | value);
             }
+
+            BitUtility.LogBinValue(msg, false);
 
             BluetoothGattService serv = mUdooBluService.getService(address, service);
             if (serv != null) {
@@ -372,7 +374,6 @@ public class UdooBluManagerImpl implements UdooBluManager{
                 BluetoothGattCharacteristic charac = serv.getCharacteristic(characteristic);
                 mUdooBluService.writeCharacteristic(address, charac, msg);
 
-
                 success = true;
             }
 
@@ -383,35 +384,35 @@ public class UdooBluManagerImpl implements UdooBluManager{
         return success;
     }
 
-    public void readAnalog(final String address, IOPin.IOPIN_PIN pin,final OnCharacteristicsListener onCharacteristicsListener) {
+    public void readAnalog(final String address, IOPin.IOPIN_PIN pin,final IReaderListener<byte[]> iReaderListener) {
         if (isBluManagerReady) {
             setPinAnalogOrPwmIndex(address, IOPin.Builder(pin, IOPin.IOPIN_INDEX_VALUE.ANALOG));
             mOnResultMap.put(address, new OnBluOperationResult<Boolean>() {
                 @Override
                 public void onSuccess(Boolean aBoolean) {
                     if (aBoolean)
-                        configAnalog(address, onCharacteristicsListener);
-                    else if (onCharacteristicsListener != null)
-                        onCharacteristicsListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
+                        configAnalog(address, iReaderListener);
+                    else if (iReaderListener != null)
+                        iReaderListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
 
                     mOnResultMap.remove(this);
                 }
 
                 @Override
                 public void onError(UdooBluException runtimeException) {
-                    if (onCharacteristicsListener != null)
-                        onCharacteristicsListener.onError(runtimeException);
+                    if (iReaderListener != null)
+                        iReaderListener.onError(runtimeException);
                     mOnResultMap.remove(this);
                 }
             });
         } else if (BuildConfig.DEBUG) {
-            if (onCharacteristicsListener != null)
-                onCharacteristicsListener.onError(new UdooBluException(UdooBluException.BLU_SERVICE_NOT_READY));
+            if (iReaderListener != null)
+                iReaderListener.onError(new UdooBluException(UdooBluException.BLU_SERVICE_NOT_READY));
             Log.i(TAG, "BluManager not ready");
         }
     }
 
-    private void configAnalog(String address, OnCharacteristicsListener onCharacteristicsListener){
+    private void configAnalog(String address, IReaderListener iReaderListener){
         UUID servUuid = UDOOBLE.UUID_IOPIN_SERV;
         UUID dataUuid = UDOOBLE.UUID_IOPIN_ANALOG_READ;
 
@@ -422,8 +423,8 @@ public class UdooBluManagerImpl implements UdooBluManager{
 //            mOnCharacteristicsListenerMap.put(address + charac.getUuid().toString(), onCharacteristicsListener);
         } else {
 
-            if (onCharacteristicsListener != null)
-                onCharacteristicsListener.onError(new UdooBluException(UdooBluException.BLU_GENERIC_ERROR));
+            if (iReaderListener != null)
+                iReaderListener.onError(new UdooBluException(UdooBluException.BLU_GENERIC_ERROR));
 
             if (BuildConfig.DEBUG)
                 Log.i(TAG, "error not service for this CharacteristicModel");
@@ -840,6 +841,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
                     } else if (UdooBluService.ACTION_DATA_WRITE.equals(action)) {
                         if(mOnResultMap.containsKey(address)){
+                            BitUtility.LogBinValue(value, false);
                             OnBluOperationResult<Boolean> onResultListener = mOnResultMap.get(address);
                             if (onResultListener != null) {
                                 if (status == BluetoothGatt.GATT_SUCCESS) {
