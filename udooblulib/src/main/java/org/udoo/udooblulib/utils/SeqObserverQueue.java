@@ -4,6 +4,7 @@ import android.util.Log;
 
 import org.udoo.udooblulib.BuildConfig;
 import org.udoo.udooblulib.exceptions.UdooBluException;
+import org.udoo.udooblulib.sensor.Constant;
 
 import java.util.Observable;
 import java.util.Observer;
@@ -11,7 +12,9 @@ import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by harlem88 on 23/02/16.
@@ -19,9 +22,13 @@ import java.util.concurrent.Executors;
 public class SeqObserverQueue<T> extends Observable implements Runnable {
     private BlockingQueue<Callable> tBlockingDeque;
     private final static String TAG = "SeqObserverQueue";
+    private ExecutorService mExecutorService;
+    private AtomicBoolean mBusy;
 
     public SeqObserverQueue(BlockingQueue<Callable> tBlockingQeque) {
         tBlockingDeque = tBlockingQeque;
+        mExecutorService = Executors.newSingleThreadExecutor();
+        mBusy = new AtomicBoolean(false);
     }
 
     Queue<Observer> observers = new ConcurrentLinkedQueue<>();
@@ -132,21 +139,39 @@ public class SeqObserverQueue<T> extends Observable implements Runnable {
     }
 
     public void run() {
-        Executors.newSingleThreadExecutor().submit(new Runnable() {
+        mExecutorService.submit(new Runnable() {
             @Override
             public void run() {
                 while (true) {
                     try {
+                        mBusy.set(true);
                         tBlockingDeque.take().call();
                     } catch (Exception e) {
                         setChanged();
                         notifyObserver(new UdooBluException(UdooBluException.BLU_SEQ_OBSERVER_ERROR));
                         if (BuildConfig.DEBUG)
-                            Log.e(TAG, "run: "+ e.getMessage());
+                            Log.e(TAG, "run: " + e.getMessage());
                     }
-
+                    waitIdle(Constant.GATT_TIMEOUT);
+                    mBusy.set(false);
                 }
             }
         });
+    }
+
+    private boolean waitIdle(int i) {
+        i /= 10;
+        while (--i > 0) {
+            if (mBusy.get())
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            else
+                break;
+        }
+
+        return i > 0;
     }
 }

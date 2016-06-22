@@ -80,7 +80,7 @@ public class UdooBluService extends Service {
     private BluetoothAdapter mBtAdapter = null;
     private static final long SCAN_PERIOD = 60000;
 
-    private AtomicBoolean mBusy; // Write/read pending response
+     // Write/read pending response
     private HashMap<String, BluetoothGatt> mBluetoothGatts;
     private BlockingQueue<Callable> voidBlockingQueue = new LinkedBlockingQueue<>(10);
     private SeqObserverQueue seqObserverQueue = new SeqObserverQueue<>(voidBlockingQueue);
@@ -92,7 +92,6 @@ public class UdooBluService extends Service {
         intent.putExtra(EXTRA_ADDRESS, address);
         intent.putExtra(EXTRA_STATUS, status);
         sendBroadcast(intent);
-        mBusy = new AtomicBoolean(false);
     }
 
     private void broadcastUpdate(final String action, final BluetoothGattCharacteristic characteristic, final int status) {
@@ -101,7 +100,6 @@ public class UdooBluService extends Service {
         intent.putExtra(EXTRA_DATA, characteristic.getValue());
         intent.putExtra(EXTRA_STATUS, status);
         sendBroadcast(intent);
-        mBusy = new AtomicBoolean(false);
     }
 
     private void broadcastUpdate(final String action, final String address, final BluetoothGattCharacteristic characteristic, final int status) {
@@ -111,7 +109,6 @@ public class UdooBluService extends Service {
         intent.putExtra(EXTRA_DATA, characteristic.getValue());
         intent.putExtra(EXTRA_STATUS, status);
         sendBroadcast(intent);
-        mBusy = new AtomicBoolean(false);
     }
 
     private boolean checkGatt(String mac) {
@@ -124,10 +121,6 @@ public class UdooBluService extends Service {
             return false;
         }
 
-        if (mBusy.get()) {
-            Log.w(TAG, "LeService busy");
-            return false;
-        }
         return true;
 
     }
@@ -138,12 +131,7 @@ public class UdooBluService extends Service {
         if (mBluetoothGatts.containsKey(mac)) {
             bluetoothGatt = mBluetoothGatts.get(mac);
             if (bluetoothGatt != null) {
-                if (mBtAdapter != null) {
-                    if (mBusy.get()) {
-                        Log.w(TAG, "LeService busy");
-                        bluetoothGatt = null;
-                    }
-                } else {
+                if (mBtAdapter == null) {
                     bluetoothGatt = null;
                     Log.w(TAG, "BluetoothAdapter not initialized");
                 }
@@ -156,9 +144,8 @@ public class UdooBluService extends Service {
     public BluetoothGattService getService(String mBleAddress, UUID uuidLedServ) {
         BluetoothGattService gattService = null;
         BluetoothGatt bluetoothGatt = checkAndGetGattItem(mBleAddress);
-        if (bluetoothGatt != null && mBusy.compareAndSet(false, true)) {
+        if (bluetoothGatt != null) {
             gattService = bluetoothGatt.getService(uuidLedServ);
-            mBusy.set(false);
         }
         return gattService;
     }
@@ -313,10 +300,8 @@ public class UdooBluService extends Service {
                     BluetoothGatt bluetoothGatt = checkAndGetGattItem(mac);
                     boolean success = false;
                     if (bluetoothGatt != null && characteristic != null) {
-                        mBusy.set(true);
                         success = bluetoothGatt.readCharacteristic(characteristic);
-                        waitIdle(Constant.GATT_TIMEOUT);
-                        mBusy.set(false);
+//                        waitIdle(Constant.GATT_TIMEOUT);
                     }
                     return success;
                 }
@@ -333,18 +318,16 @@ public class UdooBluService extends Service {
             voidBlockingQueue.put(new Callable<Boolean>() {
                 @Override
                 public Boolean call() throws Exception {
-                    BluetoothGatt bluetoothGatt = checkAndGetGattItem(address);
                     boolean result = false;
-                    if (bluetoothGatt != null) {
-                        mBusy.set(true);
-                        characteristic.setValue(b);
-                        result = bluetoothGatt.writeCharacteristic(characteristic);
-                        waitIdle(Constant.GATT_TIMEOUT);
-                        mBusy.set(false);
-                        if (!result) {
-                            broadcastUpdate(ACTION_DATA_WRITE, address, characteristic, BluetoothGatt.GATT_WRITE_NOT_PERMITTED);
+                    BluetoothGatt bluetoothGatt = checkAndGetGattItem(address);
+                        if (bluetoothGatt != null) {
+                            characteristic.setValue(b);
+                            result = bluetoothGatt.writeCharacteristic(characteristic);
+                            if (!result) {
+                                broadcastUpdate(ACTION_DATA_WRITE, address, characteristic, BluetoothGatt.GATT_WRITE_NOT_PERMITTED);
+                            }
+//                            waitIdle(Constant.GATT_TIMEOUT);
                         }
-                    }
                     return result;
                 }
             });
@@ -553,21 +536,21 @@ public class UdooBluService extends Service {
         return devList.size();
     }
 
-    private boolean waitIdle(int i) {
-        i /= 10;
-        while (--i > 0) {
-            if (mBusy.get())
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            else
-                break;
-        }
-
-        return i > 0;
-    }
+//    private boolean waitIdle(int i) {
+//        i /= 10;
+//        while (--i > 0) {
+//            if (mBusy.get())
+//                try {
+//                    Thread.sleep(10);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//            else
+//                break;
+//        }
+//
+//        return i > 0;
+//    }
 
     private BluetoothGattCallback bluetoothGattCallbackBuilder() {
         return new BluetoothGattCallback() {
