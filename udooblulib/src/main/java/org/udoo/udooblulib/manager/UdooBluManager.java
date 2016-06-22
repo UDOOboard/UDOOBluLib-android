@@ -26,17 +26,16 @@ public interface UdooBluManager {
     boolean bond(String address);
     boolean discoveryServices(String address);
     boolean [] getSensorDetected();
-    boolean enableNotification(String address, boolean enable, UDOOBLESensor sensor, OnCharacteristicsListener onCharacteristicsListener);
-    boolean setNotificationPeriod(String address, UDOOBLESensor sensor);
-    boolean setNotificationPeriod(String address, UDOOBLESensor sensor, int period);
 
     boolean turnLed(String address, int color, byte func, int millis);
 
     void setIoPinMode(String address, final OnBluOperationResult<Boolean> onResultListener, IOPin... ioPins);
-    public void digitalWrite(final String address,  final OnBluOperationResult<Boolean> onBluOperationResult, final IOPin... ioPins);
-    boolean analogRead(IOPin.IOPIN_PIN pin);
+    void writeDigital(final String address, final OnBluOperationResult<Boolean> onBluOperationResult, final IOPin... ioPins);
+    void writePwm(final String address, final IOPin.IOPIN_PIN pin, final int freq, final int dutyCycle, final OnBluOperationResult<Boolean> onResultListener);
 
-    void readDigital(String address, IReaderListener<byte[]> readerListener, IOPin... pin);
+
+        void readDigital(String address, IReaderListener<byte[]> readerListener, IOPin... pin);
+    void readAnalog(final String address, final IOPin.IOPIN_PIN pin, final IReaderListener<byte[]> iReaderListener);
     void readAccelerometer(String address, IReaderListener<byte[]> readerListener);
     void readGyroscope(String address, IReaderListener<byte[]> readerListener);
     void readMagnetometer(String address, IReaderListener<byte[]> readerListener);
@@ -45,27 +44,37 @@ public interface UdooBluManager {
     void readHumidity(String address, IReaderListener<byte[]> onCharacteristicsListener);
     void readAmbientLight(String address, IReaderListener<byte[]> onCharacteristicsListener);
 
-    void subscribeNotificationAccelerometer(String address, INotificationListener<Point3D> notificationListener);
-    void subscribeNotificationAccelerometer(String address, INotificationListener<Point3D> notificationListener, int period);
+    void subscribeNotificationAccelerometer(String address, INotificationListener<byte[]> notificationListener);
+    void subscribeNotificationAccelerometer(String address, INotificationListener<byte[]> notificationListener, int period);
+    void unSubscribeNotificationAccelerometer(String address, OnBluOperationResult<Boolean> operationResult);
 
-    void subscribeNotificationGyroscope(INotificationListener<Point3D> notificationListener);
-    void subscribeNotificationGyroscope(INotificationListener<Point3D> notificationListener, int period);
+    void subscribeNotificationGyroscope(String address, INotificationListener<byte[]> notificationListener);
+    void subscribeNotificationGyroscope(String address, INotificationListener<byte[]> notificationListener, int period);
+    void unSubscribeNotificationGyroscope(String address, OnBluOperationResult<Boolean> operationResult);
 
-    void subscribeNotificationMagnetometer(INotificationListener<Integer> notificationListener);
-    void subscribeNotificationMagnetometer(INotificationListener<Integer> notificationListener, int period);
+    void subscribeNotificationMagnetometer(String address, INotificationListener<byte[]> notificationListener);
+    void subscribeNotificationMagnetometer(String address, INotificationListener<byte[]> notificationListener, int period);
+    void unSubscribeNotificationMagnetometer(String address, OnBluOperationResult<Boolean> operationResult);
 
-    void subscribeNotificationBarometer(INotificationListener<Integer> notificationListener);
-    void subscribeNotificationBarometer(INotificationListener<Integer> notificationListener, int period);
+    void subscribeNotificationBarometer(String address, INotificationListener<byte[]> notificationListener);
+    void subscribeNotificationBarometer(String address, INotificationListener<byte[]> notificationListener, int period);
+    void unSubscribeNotificationBarometer(String address, OnBluOperationResult<Boolean> operationResult);
 
-    void subscribeNotificationTemparature(INotificationListener<Float> notificationListener);
-    void subscribeNotificationTemparature(INotificationListener<Float> notificationListener, int period);
+    void subscribeNotificationTemperature(String address, INotificationListener<byte[]> notificationListener);
+    void subscribeNotificationTemperature(String address, INotificationListener<byte[]> notificationListener, int period);
+    void unSubscribeNotificationTemperature(String address, OnBluOperationResult<Boolean> operationResult);
 
-    void subscribeNotificationHumidity(INotificationListener<Integer> notificationListener);
-    void subscribeNotificationHumidity(INotificationListener<Integer> notificationListener, int period);
+    void subscribeNotificationHumidity(String address, INotificationListener<byte[]> notificationListener);
+    void subscribeNotificationHumidity(String address, INotificationListener<byte[]> notificationListener, int period);
+    void unSubscribeNotificationHumidity(String address, OnBluOperationResult<Boolean> operationResult);
 
-    void subscribeNotificationAmbientLight(INotificationListener<Integer> notificationListener);
-    void subscribeNotificationAmbientLight(INotificationListener<Integer> notificationListener, int period);
+    void subscribeNotificationAmbientLight(String address, INotificationListener<byte[]> notificationListener);
+    void subscribeNotificationAmbientLight(String address, INotificationListener<byte[]> notificationListener, int period);
+    void unSubscribeNotificationAmbientLight(String address, OnBluOperationResult<Boolean> operationResult);
 
+    void subscribeNotificationAnalog(String address, IOPin.IOPIN_PIN pin, INotificationListener<byte[]> notificationListener);
+    void subscribeNotificationAnalog(String address, IOPin.IOPIN_PIN pin, INotificationListener<byte[]> notificationListener, int period);
+    void unSubscribeNotificationAnalog(String address, OnBluOperationResult<Boolean> operationResult);
     /**
      * @param pin
      * @param freq value 3 to 24000000 (24 MHz)

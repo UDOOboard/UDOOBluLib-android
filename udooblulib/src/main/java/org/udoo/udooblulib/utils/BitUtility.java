@@ -72,4 +72,12 @@ public class BitUtility {
         return result;
     }
 
+    public static byte[] To2Bytes(int i) {
+        byte[] result = new byte[2];
+
+        result[0] = (byte) (i >> 8);
+        result[1] = (byte) (i /*>> 0*/);
+
+        return result;
+    }
 }

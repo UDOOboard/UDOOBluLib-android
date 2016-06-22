@@ -70,6 +70,7 @@ public class UdooBluService extends Service {
     public final static String ACTION_DATA_READ = "ACTION_DATA_READ";
     public final static String ACTION_DATA_NOTIFY = "ACTION_DATA_NOTIFY";
     public final static String ACTION_DATA_WRITE = "ACTION_DATA_WRITE";
+    public final static String ACTION_DESCRIPTION_WRITE = "ACTION_DESCRIPTION_WRITE";
     public final static String EXTRA_DATA = "EXTRA_DATA";
     public final static String EXTRA_UUID = "EXTRA_UUID";
     public final static String EXTRA_STATUS = "EXTRA_STATUS";
@@ -326,7 +327,6 @@ public class UdooBluService extends Service {
                             if (!result) {
                                 broadcastUpdate(ACTION_DATA_WRITE, address, characteristic, BluetoothGatt.GATT_WRITE_NOT_PERMITTED);
                             }
-//                            waitIdle(Constant.GATT_TIMEOUT);
                         }
                     return result;
                 }
@@ -389,25 +389,36 @@ public class UdooBluService extends Service {
      * @param characteristic Characteristic to act on.
      * @param enable         If true, enable notification. False otherwise.
      */
-    public boolean setCharacteristicNotification(String mac, BluetoothGattCharacteristic characteristic, boolean enable) {
-        BluetoothGatt bluetoothGatt = checkAndGetGattItem(mac);
-        boolean result = false;
-        if (bluetoothGatt != null && bluetoothGatt.setCharacteristicNotification(characteristic, enable)) {
-            BluetoothGattDescriptor clientConfig = characteristic.getDescriptor(GattInfo.CLIENT_CHARACTERISTIC_CONFIG);
-            if (clientConfig != null) {
-                if (enable) {
-                    Log.i(TAG, "enable notification");
-                    clientConfig.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                } else {
-                    Log.i(TAG, "disable notification");
-                    clientConfig.setValue(BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
+    public void setCharacteristicNotification(final String address,final BluetoothGattCharacteristic characteristic,final boolean enable) {
+        try {
+            voidBlockingQueue.put(new Callable<Boolean>() {
+                @Override
+                public Boolean call() throws Exception {
+                    BluetoothGatt bluetoothGatt = checkAndGetGattItem(address);
+                    boolean result = false;
+                    if (bluetoothGatt != null && bluetoothGatt.setCharacteristicNotification(characteristic, enable)) {
+                        BluetoothGattDescriptor clientConfig = characteristic.getDescriptor(GattInfo.CLIENT_CHARACTERISTIC_CONFIG);
+                        if (clientConfig != null) {
+                            if (enable) {
+                                Log.i(TAG, "enable notification");
+                                clientConfig.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                            } else {
+                                Log.i(TAG, "disable notification");
+                                clientConfig.setValue(BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
+                            }
+                            result = bluetoothGatt.writeDescriptor(clientConfig);
+                        }
+                    } else {
+                        Log.w(TAG, "setCharacteristicNotification failed");
+                    }
+                    return result;
                 }
-                result = bluetoothGatt.writeDescriptor(clientConfig);
-            }
-        } else {
-            Log.w(TAG, "setCharacteristicNotification failed");
+            });
+        } catch (InterruptedException e) {
+            broadcastUpdate(ACTION_DATA_WRITE, address, characteristic, BluetoothGatt.GATT_WRITE_NOT_PERMITTED);
+            if (BuildConfig.DEBUG)
+                Log.e(TAG, "writeCharacteristic: " + e.getMessage());
         }
-        return result;
     }
 
     public boolean isNotificationEnabled(String mac, BluetoothGattCharacteristic characteristic) {
@@ -610,7 +621,7 @@ public class UdooBluService extends Service {
 
             @Override
             public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-                Log.i(TAG, "onDescriptorWrite");
+                broadcastUpdate(ACTION_DESCRIPTION_WRITE, gatt.getDevice().getAddress(), status);
             }
         };
 
