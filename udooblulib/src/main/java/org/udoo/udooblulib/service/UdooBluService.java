@@ -191,19 +191,6 @@ public class UdooBluService extends Service {
         Log.d(TAG, "initialize");
         mBluetoothGatts = new HashMap<>();
         mScanning = new AtomicBoolean(false);
-//        if (mBluetoothManager == null) {
-//            mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-//            if (mBluetoothManager == null) {
-//                Log.e(TAG, "Unable to initialize BluetoothManager.");
-//                return false;
-//            }
-//        }
-//
-//        mBtAdapter = mBluetoothManager.getAdapter();
-//        if (mBtAdapter == null) {
-//            Log.e(TAG, "Unable to obtain a BluetoothAdapter.");
-//            return false;
-//        }
         seqObserverQueue.run();
         return true;
     }
@@ -302,7 +289,6 @@ public class UdooBluService extends Service {
                     boolean success = false;
                     if (bluetoothGatt != null && characteristic != null) {
                         success = bluetoothGatt.readCharacteristic(characteristic);
-//                        waitIdle(Constant.GATT_TIMEOUT);
                     }
                     return success;
                 }
@@ -482,8 +468,8 @@ public class UdooBluService extends Service {
             final BluetoothDevice device = mBtAdapter.getRemoteDevice(address);
             int connectionState = mBluetoothManager.getConnectionState(device, BluetoothProfile.GATT);
 
+            BluetoothGatt bluetoothGatt = checkAndGetGattItem(address);
             if (connectionState == BluetoothProfile.STATE_DISCONNECTED) {
-                BluetoothGatt bluetoothGatt = checkAndGetGattItem(address);
                 // Previously connected device. Try to reconnect.
                 if (bluetoothGatt != null) {
                     Log.d(TAG, "Re-use GATT connection");
@@ -501,6 +487,8 @@ public class UdooBluService extends Service {
             } else {
                 Log.w(TAG, "Attempt to connect in state: " + connectionState);
                 bond(address);
+                bluetoothGatt = device.connectGatt(this, true, bluetoothGattCallbackBuilder());
+                mBluetoothGatts.put(address, bluetoothGatt);
             }
         }
     }

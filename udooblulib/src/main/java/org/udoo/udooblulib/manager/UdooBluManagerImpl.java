@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -22,6 +23,7 @@ import org.udoo.udooblulib.interfaces.IBleDeviceListener;
 import org.udoo.udooblulib.interfaces.INotificationListener;
 import org.udoo.udooblulib.interfaces.IReaderListener;
 import org.udoo.udooblulib.interfaces.OnBluOperationResult;
+import org.udoo.udooblulib.interfaces.OnResult;
 import org.udoo.udooblulib.model.IOPin;
 import org.udoo.udooblulib.scan.BluScanCallBack;
 import org.udoo.udooblulib.sensor.Constant;
@@ -29,9 +31,16 @@ import org.udoo.udooblulib.sensor.UDOOBLE;
 import org.udoo.udooblulib.sensor.UDOOBLESensor;
 import org.udoo.udooblulib.service.UdooBluService;
 import org.udoo.udooblulib.utils.BitUtility;
+import org.udoo.udooblulib.utils.SeqObserverQueue;
 
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Created by harlem88 on 24/03/16.
@@ -49,8 +58,10 @@ public class UdooBluManagerImpl implements UdooBluManager{
     private boolean mScanning;
     private String TAG = "BluManager";
     private IBluManagerCallback mIBluManagerCallback;
-
-
+    private BlockingQueue<Callable> voidBlockingQueue = new LinkedBlockingQueue<>(10);
+    private SeqObserverQueue seqObserverQueue = new SeqObserverQueue<>(voidBlockingQueue, 50);
+    private boolean mIsBindService;
+    private static final String BLU_FILE = "blu_prefs.xml";
     /***
      * 0 Accelerometer
      * 1 Magnetometer
@@ -88,7 +99,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
         mIReaderListenerMap = new HashMap<>();
         mINotificationListenerMap = new HashMap<>();
         mOnResultMap = new HashMap<>();
-        context.bindService(new Intent(context, UdooBluService.class), mConnection, Context.BIND_AUTO_CREATE);
+        mIsBindService = context.bindService(new Intent(context, UdooBluService.class), mConnection, Context.BIND_AUTO_CREATE);
         context.registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
         context.registerReceiver(mGattBoundReceiver, new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED));
         mHandler = new Handler(Looper.getMainLooper());
@@ -120,19 +131,21 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
+            if (BuildConfig.DEBUG)
+                Log.i(TAG, "failed to udooBluService");
             mBound = false;
         }
     };
 
-    public void scanLeDevice(boolean enable, BluScanCallBack scanCallback) {
-        if (isBluManagerReady) {
+    public void scanLeDevice(boolean enable, BluScanCallBack scanCallback){
+        if (mIsBindService && isBluManagerReady) {
             mUdooBluService.scanLeDevice(enable, scanCallback);
         } else if (scanCallback != null)
             scanCallback.onError(new UdooBluException(UdooBluException.BLU_SERVICE_NOT_READY));
     }
 
     public void connect(final String address, IBleDeviceListener iBleDeviceListener) {
-        if (isBluManagerReady) {
+        if (mIsBindService && isBluManagerReady) {
             mUdooBluService.connect(address, iBleDeviceListener);
             mDeviceListenerMap.put(address, iBleDeviceListener);
         } else if (iBleDeviceListener != null)
@@ -236,59 +249,65 @@ public class UdooBluManagerImpl implements UdooBluManager{
             operationResult.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
     }
 
-
     private void setNotification(final String address, final SENSORS sensor, final UDOOBLESensor udoobleSensor, final int period, final INotificationListener<byte[]> iNotificationListener) {
         if (isBluManagerReady) {
-            int sensVer = sensorVerifier(sensor);
-            if (sensVer == 1) {
-                if(period != 0){
-                    setNotificationPeriod(address, udoobleSensor, period, new OnBluOperationResult<Boolean>() {
-                        @Override
-                        public void onSuccess(Boolean aBoolean) {
-                            if(aBoolean)
-                                setNotification(address, udoobleSensor, iNotificationListener);
-                            else if(iNotificationListener != null)
-                                    iNotificationListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_PERIOD_NOTIFICATION_ERROR));
+            addOperation(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    int sensVer = sensorVerifier(sensor);
+                    if (sensVer == 1) {
+                        if (period != 0) {
+                            setNotificationPeriod(address, udoobleSensor, period, new OnBluOperationResult<Boolean>() {
+                                @Override
+                                public void onSuccess(Boolean aBoolean) {
+                                    if (aBoolean)
+                                        setNotification(address, udoobleSensor, iNotificationListener);
+                                    else if (iNotificationListener != null)
+                                        iNotificationListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_PERIOD_NOTIFICATION_ERROR));
 
-                            mOnResultMap.remove(address);
-                        }
+                                    mOnResultMap.remove(address);
+                                }
 
-                        @Override
-                        public void onError(UdooBluException runtimeException) {
-                            if(iNotificationListener != null)
-                                iNotificationListener.onError(runtimeException);
+                                @Override
+                                public void onError(UdooBluException runtimeException) {
+                                    if (iNotificationListener != null)
+                                        iNotificationListener.onError(runtimeException);
 
-                            mOnResultMap.remove(address);
-                        }
-                    });
-                }
-                else setNotification(address, udoobleSensor, iNotificationListener);
-            } else if (sensVer == 0) {
-                enableSensor(address, udoobleSensor, true, new OnBluOperationResult<Boolean>() {
-                    @Override
-                    public void onSuccess(Boolean aBoolean) {
-                        if (aBoolean) {
-                            sensorsEnabled[sensor.ordinal()] = true;
-                            mOnResultMap.remove(address);
-                            setNotification(address, udoobleSensor, iNotificationListener);
-                        } else {
-                            if (iNotificationListener != null)
-                                iNotificationListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
-                        }
-                        mOnResultMap.remove(address);
-                    }
-                    @Override
-                    public void onError(UdooBluException runtimeException) {
+                                    mOnResultMap.remove(address);
+                                }
+                            });
+                        } else setNotification(address, udoobleSensor, iNotificationListener);
+                    } else if (sensVer == 0) {
+                        enableSensor(address, udoobleSensor, true, new OnBluOperationResult<Boolean>() {
+                            @Override
+                            public void onSuccess(Boolean aBoolean) {
+                                if (aBoolean) {
+                                    sensorsEnabled[sensor.ordinal()] = true;
+                                    mOnResultMap.remove(address);
+                                    setNotification(address, udoobleSensor, iNotificationListener);
+                                } else {
+                                    if (iNotificationListener != null)
+                                        iNotificationListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
+                                }
+                                mOnResultMap.remove(address);
+                            }
+
+                            @Override
+                            public void onError(UdooBluException runtimeException) {
+                                if (iNotificationListener != null)
+                                    iNotificationListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
+
+                                mOnResultMap.remove(address);
+                            }
+                        });
+                    } else {
                         if (iNotificationListener != null)
-                            iNotificationListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
-
-                        mOnResultMap.remove(address);
+                            iNotificationListener.onError(new UdooBluException(UdooBluException.BLU_SENSOR_NOT_FOUND));
                     }
-                });
-            } else {
-                if (iNotificationListener != null)
-                    iNotificationListener.onError(new UdooBluException(UdooBluException.BLU_SENSOR_NOT_FOUND));
-            }
+                    return null;
+                }
+            });
+
         } else {
             if (BuildConfig.DEBUG)
                 Log.i(TAG, "BluManager not ready");
@@ -298,55 +317,68 @@ public class UdooBluManagerImpl implements UdooBluManager{
         }
     }
 
-    public void setIoPinMode(String address, final OnBluOperationResult<Boolean> onResultListener, IOPin... ioPins) {
+    private void addOperation(Callable<Void> operation){
+        try {
+            voidBlockingQueue.put(operation);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setIoPinMode(final String address, final OnBluOperationResult<Boolean> onResultListener, final IOPin... ioPins) {
         if (isBluManagerReady) {
-            UUID service, characteristic;
-            byte msg[] = new byte[2];
-            service = UDOOBLE.UUID_IOPIN_SERV;
-            characteristic = UDOOBLE.UUID_IOPIN_PIN_MODE;
-            IOPin ioPin;
-            int len = ioPins.length;
-            if (len > 8)
-                len = 8;
+            addOperation(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    UUID service, characteristic;
+                    byte msg[] = new byte[2];
+                    service = UDOOBLE.UUID_IOPIN_SERV;
+                    characteristic = UDOOBLE.UUID_IOPIN_PIN_MODE;
+                    IOPin ioPin;
+                    int len = ioPins.length;
+                    if (len > 8)
+                        len = 8;
 
-            for (int i = 0; i < len; i++) {
-                ioPin = ioPins[i];
-                byte mode = ioPin.getPinMode();
-                int shift = 0;
-                switch (ioPin.pin) {
-                    case D7:
-                    case A3:
-                        shift = 6;
-                        break;
-                    case D6:
-                    case A2:
-                        shift = 4;
-                        break;
-                    case A5:
-                    case A1:
-                        shift = 2;
-                        break;
-                    case A4:
-                    case A0:
-                        shift = 0;
-                        break;
-                }
-                byte value = (byte) ((mode << shift) & 0xff);
-                int idx = ioPin.getPinValue() >= 4 ? 1 : 0;
-                msg[idx] = (byte) (msg[idx] | value);
-            }
+                    for (int i = 0; i < len; i++) {
+                        ioPin = ioPins[i];
+                        byte mode = ioPin.getPinMode();
+                        int shift = 0;
+                        switch (ioPin.pin) {
+                            case D7:
+                            case A3:
+                                shift = 6;
+                                break;
+                            case D6:
+                            case A2:
+                                shift = 4;
+                                break;
+                            case A5:
+                            case A1:
+                                shift = 2;
+                                break;
+                            case A4:
+                            case A0:
+                                shift = 0;
+                                break;
+                        }
+                        byte value = (byte) ((mode << shift) & 0xff);
+                        int idx = ioPin.getPinValue() >= 4 ? 1 : 0;
+                        msg[idx] = (byte) (msg[idx] | value);
+                    }
 
-            BitUtility.LogBinValue(msg, false);
+                    BitUtility.LogBinValue(msg, false);
 
-            BluetoothGattService serv = mUdooBluService.getService(address, service);
-            if (serv != null) {
-                BluetoothGattCharacteristic charac = serv.getCharacteristic(characteristic);
-                mOnResultMap.put(address, onResultListener);
-                mUdooBluService.writeCharacteristic(address, charac, msg);
-            if (BuildConfig.DEBUG)
-                BitUtility.LogBinValue(msg, false);
-            }
-        }else if (onResultListener != null) {
+                    BluetoothGattService serv = mUdooBluService.getService(address, service);
+                    if (serv != null) {
+                        BluetoothGattCharacteristic charac = serv.getCharacteristic(characteristic);
+                        mOnResultMap.put(address, onResultListener);
+                        mUdooBluService.writeCharacteristic(address, charac, msg);
+                        if (BuildConfig.DEBUG)
+                            BitUtility.LogBinValue(msg, false);
+                    }
+                    return null;
+                }});
+        } else if (onResultListener != null) {
             onResultListener.onError(new UdooBluException(UdooBluException.BLU_SERVICE_NOT_READY));
         }
     }
@@ -354,35 +386,40 @@ public class UdooBluManagerImpl implements UdooBluManager{
     @Override
     public void readDigital(final String address, final IReaderListener<byte[]> readerListener, final IOPin... pins) {
         if (isBluManagerReady) {
-            if (iOPinVerifier(IOPin.IOPIN_MODE.DIGITAL_INPUT, pins)) {
-                UUID servUuid = UDOOBLE.UUID_IOPIN_SERV;
-                UUID dataUuid = UDOOBLE.UUID_IOPIN_DIGITAL_DATA;
-                BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
+            addOperation(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    if (iOPinVerifier(IOPin.IOPIN_MODE.DIGITAL_INPUT, pins)) {
+                        UUID servUuid = UDOOBLE.UUID_IOPIN_SERV;
+                        UUID dataUuid = UDOOBLE.UUID_IOPIN_DIGITAL_DATA;
+                        BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
 
-                if (serv != null) {
-                    BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
-                    mUdooBluService.readCharacteristic(address, charac);
-                    mIReaderListenerMap.put(address + charac.getUuid().toString(), readerListener);
-                } else {
-                    if (readerListener != null)
-                        readerListener.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
+                        if (serv != null) {
+                            BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
+                            mUdooBluService.readCharacteristic(address, charac);
+                            mIReaderListenerMap.put(address + charac.getUuid().toString(), readerListener);
+                        } else {
+                            if (readerListener != null)
+                                readerListener.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
+                        }
+                    } else {
+                        iOPinModeBuilder(IOPin.IOPIN_MODE.DIGITAL_INPUT, pins);
+                        setIoPinMode(address, new OnBluOperationResult<Boolean>() {
+                            @Override
+                            public void onSuccess(Boolean aBoolean) {
+                                setLocaliOPinConfig(IOPin.IOPIN_MODE.DIGITAL_INPUT, pins);
+                                readDigital(address, readerListener, pins);
+                            }
+                            @Override
+                            public void onError(UdooBluException runtimeException) {
+                                if (runtimeException != null && readerListener != null)
+                                    readerListener.onError(new UdooBluException(UdooBluException.BLU_READ_CHARAC_ERROR));
+                            }
+                        }, pins);
+                    }
+                    return null;
                 }
-            } else {
-                iOPinModeBuilder(IOPin.IOPIN_MODE.DIGITAL_INPUT, pins);
-                setIoPinMode(address, new OnBluOperationResult<Boolean>() {
-                    @Override
-                    public void onSuccess(Boolean aBoolean) {
-                        setLocaliOPinConfig(IOPin.IOPIN_MODE.DIGITAL_INPUT, pins);
-                        readDigital(address, readerListener, pins);
-                    }
-
-                    @Override
-                    public void onError(UdooBluException runtimeException) {
-                        if (runtimeException != null && readerListener != null)
-                            readerListener.onError(new UdooBluException(UdooBluException.BLU_READ_CHARAC_ERROR));
-                    }
-                }, pins);
-            }
+            });
         } else {
             if (BuildConfig.DEBUG)
                 Log.i(TAG, "BluManager not ready");
@@ -422,25 +459,30 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
     @Override
     public void readAnalog(final String address, final IOPin.IOPIN_PIN pin, final IReaderListener<byte[]> iReaderListener) {
-        configAnalog(address, pin, new OnBluOperationResult<Boolean>() {
+        addOperation(new Callable<Void>() {
             @Override
-            public void onSuccess(Boolean aBoolean) {
-                if (aBoolean)
-                    readAnalog(address, iReaderListener);
-                else if (iReaderListener != null)
-                    iReaderListener.onError(new UdooBluException(UdooBluException.BLU_NOTIFICATION_ERROR));
-                mOnResultMap.remove(address);
-            }
+            public Void call() throws Exception {
+                configAnalog(address, pin, new OnBluOperationResult<Boolean>() {
+                    @Override
+                    public void onSuccess(Boolean aBoolean) {
+                        if (aBoolean)
+                            readAnalog(address, iReaderListener);
+                        else if (iReaderListener != null)
+                            iReaderListener.onError(new UdooBluException(UdooBluException.BLU_NOTIFICATION_ERROR));
+                        mOnResultMap.remove(address);
+                    }
 
-            @Override
-            public void onError(UdooBluException runtimeException) {
-                if (iReaderListener != null)
-                    iReaderListener.onError(runtimeException);
+                    @Override
+                    public void onError(UdooBluException runtimeException) {
+                        if (iReaderListener != null)
+                            iReaderListener.onError(runtimeException);
 
-                mOnResultMap.remove(address);
+                        mOnResultMap.remove(address);
+                    }
+                });
+                return null;
             }
         });
-
     }
 
     private void readAnalog(String address, final IReaderListener<byte[]> iReaderListener) {
@@ -461,52 +503,59 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
     public void configAnalog(final String address, final IOPin.IOPIN_PIN pin, final OnBluOperationResult<Boolean> operationResult) {
         if (isBluManagerReady) {
-            final IOPin ioPin = IOPin.Builder(pin, IOPin.IOPIN_MODE.ANALOG);
-            if (iOPinVerifier(IOPin.IOPIN_MODE.ANALOG, ioPin)) {
-                if (indexAnalogConfig == ioPin.getIndexValue()) {
-                    if(operationResult != null)
-                        operationResult.onSuccess(true);
-                } else {
-                    setPinAnalogOrPwmIndex(address, IOPin.Builder(pin, IOPin.IOPIN_INDEX_VALUE.ANALOG), new OnBluOperationResult<Boolean>() {
-                        @Override
-                        public void onSuccess(Boolean aBoolean) {
-                            if (aBoolean) {
-                                indexAnalogConfig = ioPin.getIndexValue();
-                                if(operationResult != null)
-                                    operationResult.onSuccess(true);
-                            } else if (operationResult != null) {
-                                operationResult.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
+            addOperation(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    final IOPin ioPin = IOPin.Builder(pin, IOPin.IOPIN_MODE.ANALOG);
+                    if (iOPinVerifier(IOPin.IOPIN_MODE.ANALOG, ioPin)) {
+                        if (indexAnalogConfig == ioPin.getIndexValue()) {
+                            if (operationResult != null)
+                                operationResult.onSuccess(true);
+                        } else {
+                            setPinAnalogOrPwmIndex(address, IOPin.Builder(pin, IOPin.IOPIN_INDEX_VALUE.ANALOG), new OnBluOperationResult<Boolean>() {
+                                @Override
+                                public void onSuccess(Boolean aBoolean) {
+                                    if (aBoolean) {
+                                        indexAnalogConfig = ioPin.getIndexValue();
+                                        if (operationResult != null)
+                                            operationResult.onSuccess(true);
+                                    } else if (operationResult != null) {
+                                        operationResult.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
+                                    }
+                                }
+
+                                @Override
+                                public void onError(UdooBluException runtimeException) {
+                                    if (runtimeException != null && operationResult != null)
+                                        operationResult.onError(new UdooBluException(UdooBluException.BLU_READ_CHARAC_ERROR));
+                                }
+
+                            });
+                        }
+                    } else {
+                        iOPinModeBuilder(IOPin.IOPIN_MODE.ANALOG, ioPin);
+                        setIoPinMode(address, new OnBluOperationResult<Boolean>() {
+                            @Override
+                            public void onSuccess(Boolean aBoolean) {
+                                if (aBoolean) {
+                                    setLocaliOPinConfig(IOPin.IOPIN_MODE.ANALOG, ioPin);
+                                    configAnalog(address, pin, operationResult);
+                                } else if (operationResult != null) {
+                                    operationResult.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
+                                }
                             }
-                        }
 
-                        @Override
-                        public void onError(UdooBluException runtimeException) {
-                            if (runtimeException != null && operationResult != null)
-                                operationResult.onError(new UdooBluException(UdooBluException.BLU_READ_CHARAC_ERROR));
-                        }
-
-                    });
+                            @Override
+                            public void onError(UdooBluException runtimeException) {
+                                if (runtimeException != null && operationResult != null)
+                                    operationResult.onError(new UdooBluException(UdooBluException.BLU_READ_CHARAC_ERROR));
+                            }
+                        }, ioPin);
+                    }
+                    return null;
                 }
-            } else {
-                iOPinModeBuilder(IOPin.IOPIN_MODE.ANALOG, ioPin);
-                setIoPinMode(address, new OnBluOperationResult<Boolean>() {
-                    @Override
-                    public void onSuccess(Boolean aBoolean) {
-                        if (aBoolean) {
-                            setLocaliOPinConfig(IOPin.IOPIN_MODE.ANALOG, ioPin);
-                            configAnalog(address, pin, operationResult);
-                        } else if (operationResult != null) {
-                            operationResult.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
-                        }
-                    }
+            });
 
-                    @Override
-                    public void onError(UdooBluException runtimeException) {
-                        if (runtimeException != null && operationResult != null)
-                            operationResult.onError(new UdooBluException(UdooBluException.BLU_READ_CHARAC_ERROR));
-                    }
-                }, ioPin);
-            }
         } else {
 
             if (operationResult != null)
@@ -520,50 +569,57 @@ public class UdooBluManagerImpl implements UdooBluManager{
     @Override
     public void writePwm(final String address, final IOPin.IOPIN_PIN pin, final int freq, final int dutyCycle, final OnBluOperationResult<Boolean> onResultListener) {
         if (isBluManagerReady) {
-            final IOPin ioPin = IOPin.Builder(pin, IOPin.IOPIN_MODE.PWM);
-            if (iOPinVerifier(IOPin.IOPIN_MODE.PWM, ioPin)) {
-                if (indexAnalogConfig == ioPin.getIndexValue()) {
-                    configPwm(address, freq, dutyCycle, onResultListener);
-                } else {
-                    setPinAnalogOrPwmIndex(address, IOPin.Builder(pin, IOPin.IOPIN_INDEX_VALUE.PWM), new OnBluOperationResult<Boolean>() {
-                        @Override
-                        public void onSuccess(Boolean aBoolean) {
-                            if (aBoolean) {
-                                indexAnalogConfig = ioPin.getIndexValue();
-                                configPwm(address, freq, dutyCycle, onResultListener);
-                            } else if (onResultListener != null) {
-                                onResultListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
-                                Log.i(TAG, "onerr: setPin");
+            addOperation(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    final IOPin ioPin = IOPin.Builder(pin, IOPin.IOPIN_MODE.PWM);
+                    if (iOPinVerifier(IOPin.IOPIN_MODE.PWM, ioPin)) {
+                        if (indexAnalogConfig == ioPin.getIndexValue()) {
+                            configPwm(address, freq, dutyCycle, onResultListener);
+                        } else {
+                            setPinAnalogOrPwmIndex(address, IOPin.Builder(pin, IOPin.IOPIN_INDEX_VALUE.PWM), new OnBluOperationResult<Boolean>() {
+                                @Override
+                                public void onSuccess(Boolean aBoolean) {
+                                    if (aBoolean) {
+                                        indexAnalogConfig = ioPin.getIndexValue();
+                                        configPwm(address, freq, dutyCycle, onResultListener);
+                                    } else if (onResultListener != null) {
+                                        onResultListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
+                                        Log.i(TAG, "onerr: setPin");
+                                    }
+                                }
+
+                                @Override
+                                public void onError(UdooBluException runtimeException) {
+                                    if (runtimeException != null && onResultListener != null)
+                                        onResultListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
+                                }
+                            });
+                        }
+                    } else {
+                        iOPinModeBuilder(IOPin.IOPIN_MODE.PWM, ioPin);
+                        setIoPinMode(address, new OnBluOperationResult<Boolean>() {
+                            @Override
+                            public void onSuccess(Boolean aBoolean) {
+                                if (aBoolean) {
+                                    setLocaliOPinConfig(IOPin.IOPIN_MODE.PWM, ioPin);
+                                    writePwm(address, pin, freq, dutyCycle, onResultListener);
+                                } else if (onResultListener != null) {
+                                    onResultListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
+                                }
                             }
-                        }
 
-                        @Override
-                        public void onError(UdooBluException runtimeException) {
-                            if (runtimeException != null && onResultListener != null)
-                                onResultListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
-                        }
-                    });
+                            @Override
+                            public void onError(UdooBluException runtimeException) {
+                                if (runtimeException != null && onResultListener != null)
+                                    onResultListener.onError(runtimeException);
+                            }
+                        }, ioPin);
+                    }
+                    return null;
                 }
-            } else {
-                iOPinModeBuilder(IOPin.IOPIN_MODE.PWM, ioPin);
-                setIoPinMode(address, new OnBluOperationResult<Boolean>() {
-                    @Override
-                    public void onSuccess(Boolean aBoolean) {
-                        if (aBoolean) {
-                            setLocaliOPinConfig(IOPin.IOPIN_MODE.PWM, ioPin);
-                            writePwm(address, pin, freq, dutyCycle, onResultListener);
-                        } else if (onResultListener != null) {
-                            onResultListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
-                        }
-                    }
+            });
 
-                    @Override
-                    public void onError(UdooBluException runtimeException) {
-                        if (runtimeException != null && onResultListener != null)
-                            onResultListener.onError(runtimeException);
-                    }
-                }, ioPin);
-            }
         } else {
 
             if (onResultListener != null)
@@ -630,85 +686,96 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
     @Override
     public void writeDigital(final String address, final OnBluOperationResult<Boolean> onBluOperationResult, final IOPin... ioPins){
-        if (iOPinVerifier(IOPin.IOPIN_MODE.DIGITAL_OUTPUT, ioPins)) {
-            if (isBluManagerReady) {
-                byte[] msg;
-                UUID service = UDOOBLE.UUID_IOPIN_SERV, characteristic;
-                characteristic = UDOOBLE.UUID_IOPIN_DIGITAL_DATA;
+        addOperation(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                if (iOPinVerifier(IOPin.IOPIN_MODE.DIGITAL_OUTPUT, ioPins)) {
+                    if (isBluManagerReady) {
+                        byte[] msg;
+                        UUID service = UDOOBLE.UUID_IOPIN_SERV, characteristic;
+                        characteristic = UDOOBLE.UUID_IOPIN_DIGITAL_DATA;
 
-                msg = new byte[1];
+                        msg = new byte[1];
 
-                int len = ioPins.length;
-                if (len > 8)
-                    len = 8;
+                        int len = ioPins.length;
+                        if (len > 8)
+                            len = 8;
 
-                IOPin ioPin;
-                for (int i = 0; i < len; i++) {
-                    ioPin = ioPins[i];
-                    int shift = 0;
-                    switch (ioPin.pin) {
-                        case D7: shift = 7;break;
-                        case D6: shift = 6;break;
-                        case A5: shift = 5;break;
-                        case A4: shift = 4;break;
-                        case A3: shift = 3;break;
-                        case A2: shift = 2;break;
-                        case A1: shift = 1;break;
-                        case A0: shift = 0;break;
+                        IOPin ioPin;
+                        for (int i = 0; i < len; i++) {
+                            ioPin = ioPins[i];
+                            int shift = 0;
+                            switch (ioPin.pin) {
+                                case D7: shift = 7;break;
+                                case D6: shift = 6;break;
+                                case A5: shift = 5;break;
+                                case A4: shift = 4;break;
+                                case A3: shift = 3;break;
+                                case A2: shift = 2;break;
+                                case A1: shift = 1;break;
+                                case A0: shift = 0;break;
+                            }
+                            byte value = (byte) ((ioPin.getDigitalValue() << shift) & 0xff);
+                            msg[0] = (byte) (msg[0] | value);
+                        }
+
+                        BluetoothGattService serv = mUdooBluService.getService(address, service);
+                        if (serv != null) {
+                            BluetoothGattCharacteristic charac = serv.getCharacteristic(characteristic);
+                            mOnResultMap.put(address, onBluOperationResult);
+                            mUdooBluService.writeCharacteristic(address, charac, msg);
+                            if (BuildConfig.DEBUG)
+                                BitUtility.LogBinValue(msg, false);
+                        }
+                    }else if (onBluOperationResult != null) {
+                        onBluOperationResult.onError(new UdooBluException(UdooBluException.BLU_SERVICE_NOT_READY));
                     }
-                    byte value = (byte) ((ioPin.getDigitalValue() << shift) & 0xff);
-                    msg[0] = (byte) (msg[0] | value);
-                }
+                }else{
+                    iOPinModeBuilder(IOPin.IOPIN_MODE.DIGITAL_OUTPUT, ioPins);
+                    setIoPinMode(address, new OnBluOperationResult<Boolean>() {
+                        @Override
+                        public void onSuccess(Boolean aBoolean) {
+                            setLocaliOPinConfig(IOPin.IOPIN_MODE.DIGITAL_OUTPUT, ioPins);
+                            writeDigital(address, onBluOperationResult,ioPins);
+                        }
 
-                BluetoothGattService serv = mUdooBluService.getService(address, service);
-                if (serv != null) {
-                    BluetoothGattCharacteristic charac = serv.getCharacteristic(characteristic);
-                    mOnResultMap.put(address, onBluOperationResult);
-                    mUdooBluService.writeCharacteristic(address, charac, msg);
-                    if (BuildConfig.DEBUG)
-                        BitUtility.LogBinValue(msg, false);
+                        @Override
+                        public void onError(UdooBluException runtimeException) {
+                            if(runtimeException != null)
+                                onBluOperationResult.onError(runtimeException);
+                        }
+                    }, ioPins);
                 }
-            }else if (onBluOperationResult != null) {
-                onBluOperationResult.onError(new UdooBluException(UdooBluException.BLU_SERVICE_NOT_READY));
+                return null;
             }
-        }else{
-            iOPinModeBuilder(IOPin.IOPIN_MODE.DIGITAL_OUTPUT, ioPins);
-            setIoPinMode(address, new OnBluOperationResult<Boolean>() {
-                @Override
-                public void onSuccess(Boolean aBoolean) {
-                    setLocaliOPinConfig(IOPin.IOPIN_MODE.DIGITAL_OUTPUT, ioPins);
-                    writeDigital(address, onBluOperationResult,ioPins);
-                }
-
-                @Override
-                public void onError(UdooBluException runtimeException) {
-                    if(runtimeException != null)
-                        onBluOperationResult.onError(runtimeException);
-                }
-            }, ioPins);
-        }
+        });
     }
 
-    private void unSubscribeNotification(String address, UDOOBLESensor udoobleSensor, OnBluOperationResult<Boolean> operationResult) {
+    private void unSubscribeNotification(final String address, final UDOOBLESensor udoobleSensor, final OnBluOperationResult<Boolean> operationResult) {
         if (isBluManagerReady) {
-            UUID servUuid = udoobleSensor.getService();
-            UUID dataUuid = udoobleSensor.getData();
-            BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
+            addOperation(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    UUID servUuid = udoobleSensor.getService();
+                    UUID dataUuid = udoobleSensor.getData();
+                    BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
 
-            Log.i(TAG, "enableNotifications service " + servUuid.toString() + " is null: " + (serv == null));
+                    Log.i(TAG, "enableNotifications service " + servUuid.toString() + " is null: " + (serv == null));
 
-            if (serv != null) {
-                BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
-                String keySearch = address + charac.getUuid().toString();
+                    if (serv != null) {
+                        BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
+                        String keySearch = address + charac.getUuid().toString();
 
-                if(mINotificationListenerMap.containsKey(keySearch))
-                    mINotificationListenerMap.remove(keySearch);
+                        if (mINotificationListenerMap.containsKey(keySearch))
+                            mINotificationListenerMap.remove(keySearch);
 
-                mOnResultMap.put(address, operationResult);
-                mUdooBluService.setCharacteristicNotification(address, charac, false);
-            } else if (operationResult != null)
-                operationResult.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
-
+                        mOnResultMap.put(address, operationResult);
+                        mUdooBluService.setCharacteristicNotification(address, charac, false);
+                    } else if (operationResult != null)
+                        operationResult.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
+                    return null;
+                }
+            });
         } else {
             if (BuildConfig.DEBUG)
                 Log.i(TAG, "BluManager not ready");
@@ -718,50 +785,57 @@ public class UdooBluManagerImpl implements UdooBluManager{
         }
     }
 
-    private void readSensor(final String address, final IReaderListener<byte[]> readerListener, final SENSORS sensor, final UDOOBLESensor udoobleSensor){
+    private void readSensor(final String address, final IReaderListener<byte[]> readerListener, final SENSORS sensor, final UDOOBLESensor udoobleSensor) {
         if (isBluManagerReady) {
-            int sensVer = sensorVerifier(sensor);
-            if (sensVer == 1) {
-                UUID servUuid = udoobleSensor.getService();
-                UUID dataUuid = udoobleSensor.getData();
-                BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
+            addOperation(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    int sensVer = sensorVerifier(sensor);
+                    if (sensVer == 1) {
+                        UUID servUuid = udoobleSensor.getService();
+                        UUID dataUuid = udoobleSensor.getData();
+                        BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
 
-                if (serv != null) {
-                    BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
-                    mUdooBluService.readCharacteristic(address, charac);
-                    mIReaderListenerMap.put(address + charac.getUuid().toString(), readerListener);
-                } else {
-                    if (readerListener != null)
-                        readerListener.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
-                }
-            } else if (sensVer == 0) {
-                enableSensor(address, udoobleSensor, true, new OnBluOperationResult<Boolean>() {
-                    @Override
-                    public void onSuccess(Boolean aBoolean) {
-                        if(aBoolean){
-                            sensorsEnabled[sensor.ordinal()] = true;
-                            readSensor(address, readerListener, sensor, udoobleSensor);
-                        }else {
-                            if(readerListener != null)
-                                readerListener.onError(new UdooBluException(UdooBluException.BLU_READ_CHARAC_ERROR));
+                        if (serv != null) {
+                            BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
+                            mUdooBluService.readCharacteristic(address, charac);
+                            mIReaderListenerMap.put(address + charac.getUuid().toString(), readerListener);
+                        } else {
+                            if (readerListener != null)
+                                readerListener.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
                         }
-                    }
+                    } else if (sensVer == 0) {
+                        enableSensor(address, udoobleSensor, true, new OnBluOperationResult<Boolean>() {
+                            @Override
+                            public void onSuccess(Boolean aBoolean) {
+                                if (aBoolean) {
+                                    sensorsEnabled[sensor.ordinal()] = true;
+                                    readSensor(address, readerListener, sensor, udoobleSensor);
+                                } else {
+                                    if (readerListener != null)
+                                        readerListener.onError(new UdooBluException(UdooBluException.BLU_READ_CHARAC_ERROR));
+                                }
+                            }
 
-                    @Override
-                    public void onError(UdooBluException runtimeException) {
-                        if(readerListener != null)
-                            readerListener.onError(new UdooBluException(UdooBluException.BLU_READ_CHARAC_ERROR));
+                            @Override
+                            public void onError(UdooBluException runtimeException) {
+                                if (readerListener != null)
+                                    readerListener.onError(new UdooBluException(UdooBluException.BLU_READ_CHARAC_ERROR));
+                            }
+                        });
+                    } else {
+                        if (readerListener != null)
+                            readerListener.onError(new UdooBluException(UdooBluException.BLU_SENSOR_NOT_FOUND));
                     }
-                });
-            }else {
-                if(readerListener != null)
-                    readerListener.onError(new UdooBluException(UdooBluException.BLU_SENSOR_NOT_FOUND));
-            }
-        } else{
+                    return null;
+                }
+            });
+
+        } else {
             if (BuildConfig.DEBUG)
                 Log.i(TAG, "BluManager not ready");
 
-            if(readerListener != null)
+            if (readerListener != null)
                 readerListener.onError(new UdooBluException(UdooBluException.BLU_SERVICE_NOT_READY));
         }
     }
@@ -805,7 +879,6 @@ public class UdooBluManagerImpl implements UdooBluManager{
     @Override
     public void subscribeNotificationAccelerometer(String address, INotificationListener<byte []> notificationListener) {
         setNotification(address, SENSORS.ACC, UDOOBLESensor.ACCELEROMETER, Constant.NOTIFICATIONS_PERIOD, notificationListener);
-
     }
 
     public void unSubscribeNotificationAccelerometer(String address, OnBluOperationResult<Boolean> operationResult) {
@@ -821,7 +894,6 @@ public class UdooBluManagerImpl implements UdooBluManager{
     @Override
     public void subscribeNotificationGyroscope(String address, INotificationListener<byte []> notificationListener) {
         setNotification(address, SENSORS.GYRO, UDOOBLESensor.GYROSCOPE, Constant.NOTIFICATIONS_PERIOD, notificationListener);
-
     }
 
     @Override
@@ -914,40 +986,46 @@ public class UdooBluManagerImpl implements UdooBluManager{
     }
 
     @Override
-    public void subscribeNotificationAnalog(final String address, IOPin.IOPIN_PIN pin, final INotificationListener<byte[]> notificationListener, final int period) {
-        configAnalog(address, pin, new OnBluOperationResult<Boolean>() {
+    public void subscribeNotificationAnalog(final String address, final IOPin.IOPIN_PIN pin, final INotificationListener<byte[]> notificationListener, final int period) {
+        addOperation(new Callable<Void>() {
             @Override
-            public void onSuccess(Boolean aBoolean) {
-                if (aBoolean){
-                    setNotificationPeriod(address, UDOOBLESensor.IOPIN_ANALOG, period, new OnBluOperationResult<Boolean>() {
-                        @Override
-                        public void onSuccess(Boolean aBoolean) {
-                            if (aBoolean){
-                                setNotification(address, UDOOBLESensor.IOPIN_ANALOG, notificationListener);
-                            }else if (notificationListener != null)
-                                notificationListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_PERIOD_NOTIFICATION_ERROR));
+            public Void call() throws Exception {
+                configAnalog(address, pin, new OnBluOperationResult<Boolean>() {
+                    @Override
+                    public void onSuccess(Boolean aBoolean) {
+                        if (aBoolean) {
+                            setNotificationPeriod(address, UDOOBLESensor.IOPIN_ANALOG, period, new OnBluOperationResult<Boolean>() {
+                                @Override
+                                public void onSuccess(Boolean aBoolean) {
+                                    if (aBoolean) {
+                                        setNotification(address, UDOOBLESensor.IOPIN_ANALOG, notificationListener);
+                                    } else if (notificationListener != null)
+                                        notificationListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_PERIOD_NOTIFICATION_ERROR));
 
-                            mOnResultMap.remove(address);
-                        }
+                                    mOnResultMap.remove(address);
+                                }
 
-                        @Override
-                        public void onError(UdooBluException runtimeException) {
-                            if (notificationListener != null)
-                                notificationListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_PERIOD_NOTIFICATION_ERROR));
+                                @Override
+                                public void onError(UdooBluException runtimeException) {
+                                    if (notificationListener != null)
+                                        notificationListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_PERIOD_NOTIFICATION_ERROR));
 
-                            mOnResultMap.remove(address);
-                        }
-                    });
-                }
-                else if (notificationListener != null)
-                    notificationListener.onError(new UdooBluException(UdooBluException.BLU_NOTIFICATION_ERROR));
+                                    mOnResultMap.remove(address);
+                                }
+                            });
+                        } else if (notificationListener != null)
+                            notificationListener.onError(new UdooBluException(UdooBluException.BLU_NOTIFICATION_ERROR));
 
-            }
+                    }
 
-            @Override
-            public void onError(UdooBluException runtimeException) {
-                if (notificationListener != null)
-                    notificationListener.onError(runtimeException);
+                    @Override
+                    public void onError(UdooBluException runtimeException) {
+                        if (notificationListener != null)
+                            notificationListener.onError(runtimeException);
+                    }
+                });
+
+                return null;
             }
         });
     }
@@ -1008,7 +1086,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
                     if (mDeviceListenerMap.containsKey(address)) {
                         mUdooBluService.bond(address);
-
+                        saveBluItem(context, address, "");
                         detectSensors(address, new IReaderListener<byte[]>() {
                             @Override
                             public void oRead(byte[] value) {
@@ -1083,6 +1161,40 @@ public class UdooBluManagerImpl implements UdooBluManager{
             }
         }
     };
+
+    @Override
+    public void saveBluItem(Context context, String address, String name) {
+        SharedPreferences sharedPref = context.getSharedPreferences(BLU_FILE, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString(address, name);
+        editor.apply();
+    }
+
+
+    @Override
+    public void getBluItems(final Context context,final OnResult<Map<String, String>> onResult) {
+        Executors.newSingleThreadExecutor().submit(new Runnable() {
+            @Override
+            public void run() {
+                Map<String, String> values;
+                SharedPreferences sharedPref = context.getSharedPreferences(BLU_FILE, Context.MODE_PRIVATE);
+                values = (Map<String, String>)sharedPref.getAll();
+                if(onResult != null)
+                    onResult.onSuccess(values);
+            }});
+    }
+
+    @Override
+    public void getBluItem(final Context context, final String address,final OnResult<String> onResult) {
+        Executors.newSingleThreadExecutor().submit(new Runnable() {
+            @Override
+            public void run() {
+                SharedPreferences sharedPref = context.getSharedPreferences(BLU_FILE, Context.MODE_PRIVATE);
+                if(onResult != null)
+                    onResult.onSuccess(sharedPref.getString(address, ""));
+            }
+        });
+    }
 
 
     private static IntentFilter makeGattUpdateIntentFilter() {

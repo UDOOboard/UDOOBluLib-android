@@ -24,16 +24,27 @@ public class SeqObserverQueue<T> extends Observable implements Runnable {
     private final static String TAG = "SeqObserverQueue";
     private ExecutorService mExecutorService;
     private AtomicBoolean mBusy;
+    private Queue<Observer> observers;
+    private boolean changed;
+    private int mWAIT;
 
     public SeqObserverQueue(BlockingQueue<Callable> tBlockingQeque) {
+        init(tBlockingQeque, Constant.GATT_TIMEOUT);
+    }
+
+    public SeqObserverQueue(BlockingQueue<Callable> tBlockingQeque, int wait) {
+        init(tBlockingQeque, wait);
+    }
+
+
+    private void init(BlockingQueue<Callable> tBlockingQeque, int wait){
         tBlockingDeque = tBlockingQeque;
         mExecutorService = Executors.newSingleThreadExecutor();
         mBusy = new AtomicBoolean(false);
+        observers = new ConcurrentLinkedQueue<>();
+        changed = false;
+        mWAIT = wait;
     }
-
-    Queue<Observer> observers = new ConcurrentLinkedQueue<>();
-
-    boolean changed = false;
 
     /**
      * Adds the specified observer to the list of observers. If it is already
@@ -152,7 +163,7 @@ public class SeqObserverQueue<T> extends Observable implements Runnable {
                         if (BuildConfig.DEBUG)
                             Log.e(TAG, "run: " + e.getMessage());
                     }
-                    waitIdle(Constant.GATT_TIMEOUT);
+                    waitIdle(mWAIT);
                     mBusy.set(false);
                 }
             }

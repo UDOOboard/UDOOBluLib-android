@@ -10,23 +10,23 @@ import org.udoo.udooblulib.utils.BindableBoolean;
  * Created by harlem88 on 16/02/16.
  */
 
-public class BleItem implements Parcelable {
+public class BluItem implements Parcelable {
     public BindableBoolean connected;
     public String name;
     public String address;
     public String rssi;
 
-    public BleItem() {
+    public BluItem() {
         connected = new BindableBoolean();
     }
 
-    public static BleItem Builder(BluetoothDevice device, String rssi) {
-        BleItem bleItem = new BleItem();
-        bleItem.name = device.getName();
-        bleItem.address = device.getAddress();
-        bleItem.rssi = rssi;
-        bleItem.connected.set(false);
-        return bleItem;
+    public static BluItem Builder(BluetoothDevice device, String rssi) {
+        BluItem bluItem = new BluItem();
+        bluItem.name = device.getName();
+        bluItem.address = device.getAddress();
+        bluItem.rssi = rssi;
+        bluItem.connected.set(false);
+        return bluItem;
     }
 
     @Override
@@ -45,22 +45,22 @@ public class BleItem implements Parcelable {
         dest.writeString(rssi);
     }
 
-    private BleItem(Parcel in) {
+    private BluItem(Parcel in) {
         this.name = in.readString();
         address = in.readString();
         rssi = in.readString();
     }
 
-    public static final Creator<BleItem> CREATOR = new Creator<BleItem>() {
+    public static final Creator<BluItem> CREATOR = new Creator<BluItem>() {
 
         @Override
-        public BleItem createFromParcel(Parcel source) {
-            return new BleItem(source);
+        public BluItem createFromParcel(Parcel source) {
+            return new BluItem(source);
         }
 
         @Override
-        public BleItem[] newArray(int size) {
-            return new BleItem[size];
+        public BluItem[] newArray(int size) {
+            return new BluItem[size];
         }
     };
 }

@@ -7,10 +7,13 @@ import org.udoo.udooblulib.interfaces.INotificationListener;
 import org.udoo.udooblulib.interfaces.IReaderListener;
 import org.udoo.udooblulib.interfaces.OnBluOperationResult;
 import org.udoo.udooblulib.interfaces.OnCharacteristicsListener;
+import org.udoo.udooblulib.interfaces.OnResult;
 import org.udoo.udooblulib.model.IOPin;
 import org.udoo.udooblulib.scan.BluScanCallBack;
 import org.udoo.udooblulib.sensor.UDOOBLESensor;
 import org.udoo.udooblulib.utils.Point3D;
+
+import java.util.Map;
 
 /**
  * Created by harlem88 on 31/05/16.
@@ -27,6 +30,10 @@ public interface UdooBluManager {
     boolean discoveryServices(String address);
     boolean [] getSensorDetected();
 
+    void saveBluItem(Context context, String address, String name);
+    void getBluItem(Context context, String address, OnResult<String> itemResult);
+    void getBluItems(Context context, OnResult<Map<String, String>> onResult);
+
     boolean turnLed(String address, int color, byte func, int millis);
 
     void setIoPinMode(String address, final OnBluOperationResult<Boolean> onResultListener, IOPin... ioPins);
@@ -34,7 +41,7 @@ public interface UdooBluManager {
     void writePwm(final String address, final IOPin.IOPIN_PIN pin, final int freq, final int dutyCycle, final OnBluOperationResult<Boolean> onResultListener);
 
 
-        void readDigital(String address, IReaderListener<byte[]> readerListener, IOPin... pin);
+    void readDigital(String address, IReaderListener<byte[]> readerListener, IOPin... pin);
     void readAnalog(final String address, final IOPin.IOPIN_PIN pin, final IReaderListener<byte[]> iReaderListener);
     void readAccelerometer(String address, IReaderListener<byte[]> readerListener);
     void readGyroscope(String address, IReaderListener<byte[]> readerListener);
