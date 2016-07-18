@@ -1,8 +1,5 @@
 package org.udoo.udooblulib.model;
 
-import com.google.common.primitives.UnsignedBytes;
-
-import org.udoo.udooblulib.sensor.Constant;
 import org.udoo.udooblulib.utils.BitUtility;
 
 /**

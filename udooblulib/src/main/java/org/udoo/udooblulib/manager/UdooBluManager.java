@@ -20,6 +20,7 @@ import java.util.Map;
  */
 
 public interface UdooBluManager {
+    enum SENSORS {ACC ,MAGN, GYRO,TEMP,BAR,HUM, AMB_LIG, RES}
 
     void init(Context context);
     void setIBluManagerCallback(UdooBluManagerImpl.IBluManagerCallback iBluManagerCallback);
@@ -29,6 +30,7 @@ public interface UdooBluManager {
     boolean bond(String address);
     boolean discoveryServices(String address);
     boolean [] getSensorDetected();
+    boolean isSensorDetected(SENSORS sensors);
 
     void saveBluItem(Context context, String address, String name);
     void getBluItem(Context context, String address, OnResult<String> itemResult);

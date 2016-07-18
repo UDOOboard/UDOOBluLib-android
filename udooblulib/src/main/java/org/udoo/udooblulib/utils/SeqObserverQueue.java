@@ -36,7 +36,6 @@ public class SeqObserverQueue<T> extends Observable implements Runnable {
         init(tBlockingQeque, wait);
     }
 
-
     private void init(BlockingQueue<Callable> tBlockingQeque, int wait){
         tBlockingDeque = tBlockingQeque;
         mExecutorService = Executors.newSingleThreadExecutor();

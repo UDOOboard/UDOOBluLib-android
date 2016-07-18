@@ -12,6 +12,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
@@ -59,7 +60,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
     private String TAG = "BluManager";
     private IBluManagerCallback mIBluManagerCallback;
     private BlockingQueue<Callable> voidBlockingQueue = new LinkedBlockingQueue<>(10);
-    private SeqObserverQueue seqObserverQueue = new SeqObserverQueue<>(voidBlockingQueue, 50);
+    private SeqObserverQueue seqObserverQueue = new SeqObserverQueue<>(voidBlockingQueue, 200);
     private boolean mIsBindService;
     private static final String BLU_FILE = "blu_prefs.xml";
     /***
@@ -72,7 +73,6 @@ public class UdooBluManagerImpl implements UdooBluManager{
      * 6 Light
      * 7 Reserved
      */
-    private enum SENSORS {ACC ,MAGN, GYRO,TEMP,BAR,HUM, AMB_LIG, RES}
     private boolean[] sensorsDetected = new boolean[8];
     private boolean[] sensorsEnabled = new boolean[8];
 
@@ -103,10 +103,13 @@ public class UdooBluManagerImpl implements UdooBluManager{
         context.registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
         context.registerReceiver(mGattBoundReceiver, new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED));
         mHandler = new Handler(Looper.getMainLooper());
+        seqObserverQueue.run();
     }
 
     public void setIBluManagerCallback(IBluManagerCallback iBluManagerCallback) {
         mIBluManagerCallback = iBluManagerCallback;
+        if(isBluManagerReady && mIBluManagerCallback != null)
+                mIBluManagerCallback.onBluManagerReady();
     }
 
     private ServiceConnection mConnection = new ServiceConnection() {
@@ -1170,7 +1173,6 @@ public class UdooBluManagerImpl implements UdooBluManager{
         editor.apply();
     }
 
-
     @Override
     public void getBluItems(final Context context,final OnResult<Map<String, String>> onResult) {
         Executors.newSingleThreadExecutor().submit(new Runnable() {
@@ -1234,6 +1236,11 @@ public class UdooBluManagerImpl implements UdooBluManager{
     @Override
     public boolean[] getSensorDetected() {
         return sensorsDetected;
+    }
+
+    @Override
+    public boolean isSensorDetected(SENSORS sensor) {
+        return sensorsDetected[sensor.ordinal()];
     }
 
     public void disconnect(String address){
