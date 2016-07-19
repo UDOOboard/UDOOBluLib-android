@@ -10,6 +10,7 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/bluHomeExample" />
             <option value="$PROJECT_DIR$/udooblulib" />
+            <option value="$PROJECT_DIR$/udoobluwearexample" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />

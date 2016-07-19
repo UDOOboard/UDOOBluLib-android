@@ -1,1 +1,1 @@
-include ':udooblulib', ':bluHomeExample'
+include ':udooblulib', ':bluHomeExample', ':udoobluwearexample'

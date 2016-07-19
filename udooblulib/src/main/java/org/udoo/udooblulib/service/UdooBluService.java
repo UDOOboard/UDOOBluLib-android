@@ -6,6 +6,7 @@ package org.udoo.udooblulib.service;
 
 import android.Manifest;
 import android.app.Service;
+import android.app.UiModeManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
@@ -23,6 +24,7 @@ import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.location.LocationManager;
 import android.os.Binder;
 import android.os.Build;
@@ -648,8 +650,10 @@ public class UdooBluService extends Service {
     }
 
     public boolean isLocationProviderEnabled(LocationManager locationManager) {
+        UiModeManager uiModeManager = (UiModeManager) getSystemService(UI_MODE_SERVICE);
         return locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-                || locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+                || locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                (uiModeManager != null && uiModeManager.getCurrentModeType() == Configuration.UI_MODE_TYPE_WATCH);
     }
 
     private boolean isPermissionGranted(String permission, Context context) {
