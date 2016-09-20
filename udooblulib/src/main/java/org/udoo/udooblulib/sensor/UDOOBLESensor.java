@@ -89,9 +89,9 @@ public enum UDOOBLESensor {
     @Override
     public Point3D convert(final byte [] value) {
       // Multiply x and y with -1 so that the values correspond with the image in the app
-      float x = (float) ((short) ((value[1] << 8) | (value[0] & 0xff))) / 6842;
-	  float y = (float) ((short) ((value[3] << 8) | (value[2] & 0xff))) / 6842;
-	  float z = (float) ((short) ((value[5] << 8) | (value[4] & 0xff))) / 6842;
+      float x = (float) ((short) ((value[1] << 8) | (value[0] & 0xff))) / 100f;
+	  float y = (float) ((short) ((value[3] << 8) | (value[2] & 0xff))) / 100f;
+	  float z = (float) ((short) ((value[5] << 8) | (value[4] & 0xff))) / 100f;
 
 	  return new Point3D(x , y , z);
     }
@@ -101,9 +101,9 @@ public enum UDOOBLESensor {
     @Override
     public Point3D convert(final byte [] value) {
 
-      float x = (float) ((short) ((value[1] << 8) | (value[0] & 0xff))) * 0.0625f;
-  	  float y = (float) ((short) ((value[3] << 8) | (value[2] & 0xff))) * 0.0625f;
-  	  float z = (float) ((short) ((value[5] << 8) | (value[4] & 0xff))) * 0.0625f;
+      float x = (float) ((short) ((value[1] << 8) | (value[0] & 0xff))) * 0.00625f;
+  	  float y = (float) ((short) ((value[3] << 8) | (value[2] & 0xff))) * 0.00625f;
+  	  float z = (float) ((short) ((value[5] << 8) | (value[4] & 0xff))) * 0.00625f;
 
       return new Point3D(x, y, z);
     }

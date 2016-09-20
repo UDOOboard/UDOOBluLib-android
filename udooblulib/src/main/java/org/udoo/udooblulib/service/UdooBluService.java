@@ -17,9 +17,7 @@ import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.BluetoothLeScanner;
-import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
-import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
@@ -31,27 +29,20 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.ParcelUuid;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
-import android.widget.Toast;
 
 import org.udoo.udooblulib.BuildConfig;
 import org.udoo.udooblulib.common.GattInfo;
 import org.udoo.udooblulib.exceptions.UdooBluException;
 import org.udoo.udooblulib.interfaces.IBleDeviceListener;
-import org.udoo.udooblulib.interfaces.OnBluOperationResult;
-import org.udoo.udooblulib.interfaces.OnResult;
 import org.udoo.udooblulib.scan.BluScanCallBack;
-import org.udoo.udooblulib.sensor.Constant;
 import org.udoo.udooblulib.sensor.UDOOBLE;
-import org.udoo.udooblulib.sensor.UDOOBLESensor;
 import org.udoo.udooblulib.utils.SeqObserverQueue;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Observer;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
@@ -472,7 +463,7 @@ public class UdooBluService extends Service {
 
             BluetoothGatt bluetoothGatt = checkAndGetGattItem(address);
             if (connectionState == BluetoothProfile.STATE_DISCONNECTED) {
-                // Previously connected device. Try to reconnect.
+//                 Previously connected device. Try to reconnect.
                 if (bluetoothGatt != null) {
                     Log.d(TAG, "Re-use GATT connection");
                     if (bluetoothGatt.connect()) {

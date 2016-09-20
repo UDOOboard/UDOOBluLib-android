@@ -12,7 +12,6 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
@@ -21,6 +20,7 @@ import android.widget.Toast;
 import org.udoo.udooblulib.BuildConfig;
 import org.udoo.udooblulib.exceptions.UdooBluException;
 import org.udoo.udooblulib.interfaces.IBleDeviceListener;
+import org.udoo.udooblulib.interfaces.IBluManagerCallback;
 import org.udoo.udooblulib.interfaces.INotificationListener;
 import org.udoo.udooblulib.interfaces.IReaderListener;
 import org.udoo.udooblulib.interfaces.OnBluOperationResult;
@@ -36,7 +36,6 @@ import org.udoo.udooblulib.utils.SeqObserverQueue;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -60,7 +59,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
     private String TAG = "BluManager";
     private IBluManagerCallback mIBluManagerCallback;
     private BlockingQueue<Callable> voidBlockingQueue = new LinkedBlockingQueue<>(10);
-    private SeqObserverQueue seqObserverQueue = new SeqObserverQueue<>(voidBlockingQueue, 200);
+    private SeqObserverQueue seqObserverQueue = new SeqObserverQueue<>(voidBlockingQueue, 300);
     private boolean mIsBindService;
     private static final String BLU_FILE = "blu_prefs.xml";
     /***
@@ -85,10 +84,6 @@ public class UdooBluManagerImpl implements UdooBluManager{
     private byte iOPinConfig [] = new byte[8];
 
     private byte indexAnalogConfig;
-
-    public interface IBluManagerCallback {
-        void onBluManagerReady();
-    }
 
     public UdooBluManagerImpl(Context context) {
         init(context);
@@ -1079,7 +1074,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
             final String address = intent.getStringExtra(UdooBluService.EXTRA_ADDRESS);
 
             if (UdooBluService.ACTION_GATT_CONNECTED.equals(action)) {
-                if(BuildConfig.DEBUG)
+                if (BuildConfig.DEBUG)
                     Log.i(TAG, "onReceive: connect");
 
                 mUdooBluService.scanServices(address);
@@ -1089,7 +1084,6 @@ public class UdooBluManagerImpl implements UdooBluManager{
 
                     if (mDeviceListenerMap.containsKey(address)) {
                         mUdooBluService.bond(address);
-                        saveBluItem(context, address, "");
                         detectSensors(address, new IReaderListener<byte[]>() {
                             @Override
                             public void oRead(byte[] value) {
@@ -1119,34 +1113,34 @@ public class UdooBluManagerImpl implements UdooBluManager{
                     UdooBluService.ACTION_DATA_READ.equals(action))) {
                 String keySearch = address + uuidStr;
 
-                    if (UdooBluService.ACTION_DATA_NOTIFY.equals(action)) {
-                        // Notification
-                        INotificationListener<byte[]> iNotificationListener = mINotificationListenerMap.get(keySearch);
-                        if (iNotificationListener != null)
-                            iNotificationListener.onNext(value);
+                if (UdooBluService.ACTION_DATA_NOTIFY.equals(action)) {
+                    // Notification
+                    INotificationListener<byte[]> iNotificationListener = mINotificationListenerMap.get(keySearch);
+                    if (iNotificationListener != null)
+                        iNotificationListener.onNext(value);
 
-                    } else if (UdooBluService.ACTION_DATA_WRITE.equals(action)) {
-                        if(mOnResultMap.containsKey(address)){
-                            OnBluOperationResult<Boolean> onResultListener = mOnResultMap.get(address);
-                            if (onResultListener != null) {
-                                if (status == BluetoothGatt.GATT_SUCCESS) {
-                                    onResultListener.onSuccess(true);
-                                } else if (status == BluetoothGatt.GATT_WRITE_NOT_PERMITTED) {
-                                    onResultListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
-                                } else {
-                                    onResultListener.onError(new UdooBluException(UdooBluException.BLU_GENERIC_ERROR));
-                                }
+                } else if (UdooBluService.ACTION_DATA_WRITE.equals(action)) {
+                    if (mOnResultMap.containsKey(address)) {
+                        OnBluOperationResult<Boolean> onResultListener = mOnResultMap.get(address);
+                        if (onResultListener != null) {
+                            if (status == BluetoothGatt.GATT_SUCCESS) {
+                                onResultListener.onSuccess(true);
+                            } else if (status == BluetoothGatt.GATT_WRITE_NOT_PERMITTED) {
+                                onResultListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
+                            } else {
+                                onResultListener.onError(new UdooBluException(UdooBluException.BLU_GENERIC_ERROR));
                             }
                         }
-                    } else if (UdooBluService.ACTION_DATA_READ.equals(action)) {
-                        IReaderListener<byte[]> iReaderListener = mIReaderListenerMap.get(keySearch);
-                        if (iReaderListener != null){
-                            if(status == BluetoothGatt.GATT_SUCCESS)
-                                iReaderListener.oRead(value);
-                            else
-                                iReaderListener.onError(new UdooBluException(UdooBluException.BLU_READ_CHARAC_ERROR));
-                        }
                     }
+                } else if (UdooBluService.ACTION_DATA_READ.equals(action)) {
+                    IReaderListener<byte[]> iReaderListener = mIReaderListenerMap.get(keySearch);
+                    if (iReaderListener != null) {
+                        if (status == BluetoothGatt.GATT_SUCCESS)
+                            iReaderListener.oRead(value);
+                        else
+                            iReaderListener.onError(new UdooBluException(UdooBluException.BLU_READ_CHARAC_ERROR));
+                    }
+                }
             } else if ((UdooBluService.ACTION_DESCRIPTION_WRITE.equals(action))) {
                 if (mOnResultMap.containsKey(address)) {
                     OnBluOperationResult<Boolean> onResultListener = mOnResultMap.get(address);
@@ -1161,6 +1155,12 @@ public class UdooBluManagerImpl implements UdooBluManager{
                     }
 
                 }
+            } else if (UdooBluService.ACTION_GATT_DISCONNECTED.equals(action)) {
+                IBleDeviceListener iBleDeviceListener = mDeviceListenerMap.get(address);
+                if (iBleDeviceListener != null)
+                    iBleDeviceListener.onDeviceDisconnect();
+                //TODO sensorEnabled[] only for mac connected, manage more sensorEnabled -> address
+                sensorsEnabled = new boolean[8];
             }
         }
     };
@@ -1202,6 +1202,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
     private static IntentFilter makeGattUpdateIntentFilter() {
         final IntentFilter fi = new IntentFilter();
         fi.addAction(UdooBluService.ACTION_GATT_CONNECTED);
+        fi.addAction(UdooBluService.ACTION_GATT_DISCONNECTED);
         fi.addAction(UdooBluService.ACTION_GATT_SERVICES_DISCOVERED);
         fi.addAction(UdooBluService.ACTION_DATA_NOTIFY);
         fi.addAction(UdooBluService.ACTION_DATA_WRITE);

@@ -3,15 +3,13 @@ package org.udoo.udooblulib.manager;
 import android.content.Context;
 
 import org.udoo.udooblulib.interfaces.IBleDeviceListener;
+import org.udoo.udooblulib.interfaces.IBluManagerCallback;
 import org.udoo.udooblulib.interfaces.INotificationListener;
 import org.udoo.udooblulib.interfaces.IReaderListener;
 import org.udoo.udooblulib.interfaces.OnBluOperationResult;
-import org.udoo.udooblulib.interfaces.OnCharacteristicsListener;
 import org.udoo.udooblulib.interfaces.OnResult;
 import org.udoo.udooblulib.model.IOPin;
 import org.udoo.udooblulib.scan.BluScanCallBack;
-import org.udoo.udooblulib.sensor.UDOOBLESensor;
-import org.udoo.udooblulib.utils.Point3D;
 
 import java.util.Map;
 
@@ -23,7 +21,7 @@ public interface UdooBluManager {
     enum SENSORS {ACC ,MAGN, GYRO,TEMP,BAR,HUM, AMB_LIG, RES}
 
     void init(Context context);
-    void setIBluManagerCallback(UdooBluManagerImpl.IBluManagerCallback iBluManagerCallback);
+    void setIBluManagerCallback(IBluManagerCallback iBluManagerCallback);
     void scanLeDevice(boolean enable, BluScanCallBack scanCallback);
     void connect(String address, IBleDeviceListener iBleDeviceListener);
     void disconnect(String address);
