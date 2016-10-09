@@ -2,6 +2,7 @@
   <dictionary name="harlem88">
     <words>
       <w>bindable</w>
+      <w>cardview</w>
     </words>
   </dictionary>
 </component>

@@ -72,7 +72,7 @@ public class UdooBluService extends Service {
     // BLE
     private BluetoothManager mBluetoothManager = null;
     private BluetoothAdapter mBtAdapter = null;
-    private static final long SCAN_PERIOD = 60000;
+    private static final long SCAN_PERIOD = 20000;
 
      // Write/read pending response
     private HashMap<String, BluetoothGatt> mBluetoothGatts;
@@ -417,7 +417,10 @@ public class UdooBluService extends Service {
         ScanFilter scanFilter =new ScanFilter.Builder().setServiceUuid(new ParcelUuid(UDOOBLE.UUID_SENSORS_SERV)).build();
         scanFilters.add(scanFilter);
 
-        ScanSettings scanSettings = new ScanSettings.Builder().build();
+        ScanSettings scanSettings = new ScanSettings.Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                .build();
+
         UdooBluException udooBluException = checkBluetooth(getApplicationContext());
         if (udooBluException != null) {
             if (scanCallback != null)
