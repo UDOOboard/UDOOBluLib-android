@@ -363,7 +363,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
                         int idx = ioPin.getPinValue() >= 4 ? 1 : 0;
                         msg[idx] = (byte) (msg[idx] | value);
                     }
-
+                    Log.i(TAG, "call: set pin mode");
                     BitUtility.LogBinValue(msg, false);
 
                     BluetoothGattService serv = mUdooBluService.getService(address, service);
@@ -716,6 +716,10 @@ public class UdooBluManagerImpl implements UdooBluManager{
                             byte value = (byte) ((ioPin.getDigitalValue() << shift) & 0xff);
                             msg[0] = (byte) (msg[0] | value);
                         }
+
+                        Log.i(TAG, "call: write difital");
+                        BitUtility.LogBinValue(msg, false);
+
 
                         BluetoothGattService serv = mUdooBluService.getService(address, service);
                         if (serv != null) {
