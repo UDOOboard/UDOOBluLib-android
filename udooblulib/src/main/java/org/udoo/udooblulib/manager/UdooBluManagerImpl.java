@@ -1042,6 +1042,16 @@ public class UdooBluManagerImpl implements UdooBluManager{
         unSubscribeNotification(address, UDOOBLESensor.IOPIN_ANALOG, operationResult);
     }
 
+    @Override
+    public void subscribeNotificationDigital(String address, INotificationListener<byte[]> notificationListener) {
+        setNotification(address, UDOOBLESensor.IOPIN_DIGITAL, notificationListener);
+    }
+
+    @Override
+    public void unSubscribeNotificationDigital(String address, OnBluOperationResult<Boolean> operationResult) {
+        unSubscribeNotification(address, UDOOBLESensor.IOPIN_DIGITAL, operationResult);
+    }
+
 
     @Override
     public boolean pwmWrite(IOPin.IOPIN_PIN pin, int freq, int dutyCycle) {

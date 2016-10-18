@@ -82,6 +82,10 @@ public interface UdooBluManager {
     void subscribeNotificationAnalog(String address, IOPin.IOPIN_PIN pin, INotificationListener<byte[]> notificationListener);
     void subscribeNotificationAnalog(String address, IOPin.IOPIN_PIN pin, INotificationListener<byte[]> notificationListener, int period);
     void unSubscribeNotificationAnalog(String address, OnBluOperationResult<Boolean> operationResult);
+
+    void subscribeNotificationDigital(String address, INotificationListener<byte[]> notificationListener);
+    void unSubscribeNotificationDigital(String address, OnBluOperationResult<Boolean> operationResult);
+
     /**
      * @param pin
      * @param freq value 3 to 24000000 (24 MHz)
