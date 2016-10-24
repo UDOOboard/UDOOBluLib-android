@@ -65,6 +65,13 @@ public class UDOOBLE {
             UUID_HUM_RES = fromString("d77269bb-79c6-452f-994c-9829da1a4229"),
 
     UUID_AMB_LIG_SERV = fromString("d772aa45-79c6-452f-994c-9829da1a4229"),
-            UUID_AMB_LIG_DATA = fromString("d77296a2-79c6-452f-994c-9829da1a4229");
+            UUID_AMB_LIG_DATA = fromString("d77296a2-79c6-452f-994c-9829da1a4229"),
+
+    UUID_OAD_SERV = fromString("d772aa45-79c6-452f-994c-9829da1a4229"),
+    UUID_OAD_DATA = fromString("d77296a2-79c6-452f-994c-9829da1a4229"),
+
+    UUID_OAD_CONTROL_SERV = fromString("d772aa45-79c6-452f-994c-9829da1a4229"),
+
+    UUID_OAD_TEST_SERV = fromString("d772aa45-79c6-452f-994c-9829da1a4229");
 }
 

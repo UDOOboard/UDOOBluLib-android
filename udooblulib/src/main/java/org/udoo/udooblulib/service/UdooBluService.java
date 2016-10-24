@@ -651,6 +651,6 @@ public class UdooBluService extends Service {
     }
 
     private boolean isPermissionGranted(String permission, Context context) {
-        return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED;
+        return  ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED;
     }
 }
