@@ -181,7 +181,6 @@ public class SeqObserverQueue<T> extends Observable implements Runnable {
             else
                 break;
         }
-
         return i > 0;
     }
 }

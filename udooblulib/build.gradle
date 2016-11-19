@@ -53,3 +53,13 @@ dependencies {
 apply from : '../install.gradle'
 apply from : '../bintray.gradle'
 
+task makeJar(type: Copy) {
+    from('build/intermediates/bundles/release/')
+    into('build/outputs/')
+    include('classes.jar')
+    rename ('classes.jar', 'udooblu.jar')
+    into('release/') //you can change this directory where you want to copy your .jar
+}
+task clearJar(type: Delete) {
+    delete 'build/libs/udooblu.jar'
+}

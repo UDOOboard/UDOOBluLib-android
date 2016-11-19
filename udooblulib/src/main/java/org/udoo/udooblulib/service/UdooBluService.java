@@ -317,6 +317,17 @@ public class UdooBluService extends Service {
         }
     }
 
+
+    public boolean writeCharacteristicNonBlock(final String address, final BluetoothGattCharacteristic characteristic, final byte[] b) {
+        boolean result = false;
+        BluetoothGatt bluetoothGatt = checkAndGetGattItem(address);
+        if (bluetoothGatt != null) {
+            characteristic.setValue(b);
+            result = bluetoothGatt.writeCharacteristic(characteristic);
+        }
+        return result;
+    }
+
     public boolean scanServices(String mac) {
         BluetoothGatt bluetoothGatt = checkAndGetGattItem(mac);
         boolean result = false;
@@ -652,5 +663,14 @@ public class UdooBluService extends Service {
 
     private boolean isPermissionGranted(String permission, Context context) {
         return  ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    public boolean requestConnectionPriority(String address, int connectionPriority) {
+        boolean result = false;
+        BluetoothGatt bluetoothGatt = checkAndGetGattItem(address);
+        if(bluetoothGatt != null){
+            result = bluetoothGatt.requestConnectionPriority(connectionPriority);
+        }
+        return result;
     }
 }

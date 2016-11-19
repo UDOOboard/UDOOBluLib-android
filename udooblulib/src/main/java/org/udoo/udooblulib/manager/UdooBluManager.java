@@ -1,5 +1,7 @@
 package org.udoo.udooblulib.manager;
 
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
 import android.content.Context;
 
 import org.udoo.udooblulib.interfaces.IBleDeviceListener;
@@ -12,6 +14,7 @@ import org.udoo.udooblulib.model.IOPin;
 import org.udoo.udooblulib.scan.BluScanCallBack;
 
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Created by harlem88 on 31/05/16.
@@ -23,10 +26,22 @@ public interface UdooBluManager {
     void init(Context context);
     void setIBluManagerCallback(IBluManagerCallback iBluManagerCallback);
     void scanLeDevice(boolean enable, BluScanCallBack scanCallback);
+
     void connect(String address, IBleDeviceListener iBleDeviceListener);
+    void setIBleDeviceListener(String address, IBleDeviceListener iBleDeviceListener);
+
     void disconnect(String address);
     boolean bond(String address);
     boolean discoveryServices(String address);
+    boolean requestConnectionPriority(String address, int connectionPriority);
+
+    BluetoothGattService getService(String address, UUID servUuid);
+    void readCharacteristic(String address, BluetoothGattCharacteristic characteristic, IReaderListener<byte[]> readerListener);
+    void writeCharacteristic(String address, BluetoothGattCharacteristic characteristic, byte[] value, OnBluOperationResult<Boolean> onResultListener);
+    boolean writeCharacteristicNonBlock(String address, BluetoothGattCharacteristic characteristic, byte[] value);
+    void subscribeNotification(String address, BluetoothGattCharacteristic characteristic, INotificationListener<byte[]> notificationListener);
+    void unSubscribeNotification(String address, BluetoothGattCharacteristic characteristic, OnBluOperationResult<Boolean> onResultListener);
+
     boolean [] getSensorDetected();
     boolean isSensorDetected(SENSORS sensors);
 
