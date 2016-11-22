@@ -35,6 +35,7 @@ public interface UdooBluManager {
     boolean discoveryServices(String address);
     boolean requestConnectionPriority(String address, int connectionPriority);
 
+    void readFirmwareVersion(String address, IReaderListener<byte[]> readerListener);
     BluetoothGattService getService(String address, UUID servUuid);
     void readCharacteristic(String address, BluetoothGattCharacteristic characteristic, IReaderListener<byte[]> readerListener);
     void writeCharacteristic(String address, BluetoothGattCharacteristic characteristic, byte[] value, OnBluOperationResult<Boolean> onResultListener);
@@ -49,7 +50,8 @@ public interface UdooBluManager {
     void getBluItem(Context context, String address, OnResult<String> itemResult);
     void getBluItems(Context context, OnResult<Map<String, String>> onResult);
 
-    boolean turnLed(String address, int color, byte func, int millis);
+    void writeLed(String address, int color, boolean enable);
+    void blinkLed(String address, int color, boolean blink);
 
     void setIoPinMode(String address, final OnBluOperationResult<Boolean> onResultListener, IOPin... ioPins);
     void writeDigital(final String address, final OnBluOperationResult<Boolean> onBluOperationResult, final IOPin... ioPins);

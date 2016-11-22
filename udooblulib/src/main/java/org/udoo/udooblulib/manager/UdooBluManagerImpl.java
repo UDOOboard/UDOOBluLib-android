@@ -28,6 +28,7 @@ import org.udoo.udooblulib.interfaces.OnResult;
 import org.udoo.udooblulib.model.IOPin;
 import org.udoo.udooblulib.scan.BluScanCallBack;
 import org.udoo.udooblulib.sensor.Constant;
+import org.udoo.udooblulib.sensor.TIUUID;
 import org.udoo.udooblulib.sensor.UDOOBLE;
 import org.udoo.udooblulib.sensor.UDOOBLESensor;
 import org.udoo.udooblulib.service.UdooBluService;
@@ -153,6 +154,41 @@ public class UdooBluManagerImpl implements UdooBluManager{
     @Override
     public void setIBleDeviceListener(String address, IBleDeviceListener iBleDeviceListener) {
         mDeviceListenerMap.put(address, iBleDeviceListener);
+    }
+
+    @Override
+    public void writeLed(String address, int color, boolean enable){
+        writeLed(address, color, enable ? Constant.LED_ON : Constant.LED_OFF);
+    }
+
+    @Override
+    public void blinkLed(String address, int color, boolean blink){
+        writeLed(address, color, blink ? Constant.BLINK_ON : Constant.LED_OFF);
+    }
+
+    private void writeLed(String address, int color, byte func) {
+        BluetoothGattService serv = null;
+        BluetoothGattCharacteristic charac = null;
+        serv = mUdooBluService.getService(address, UDOOBLE.UUID_LED_SERV);
+        if (serv != null) {
+            switch (color) {
+                case Constant.GREEN_LED:
+                    charac = serv.getCharacteristic(UDOOBLE.UUID_LED_GREEN);
+                    break;
+                case Constant.YELLOW_LED:
+                    charac = serv.getCharacteristic(UDOOBLE.UUID_LED_YELLOW);
+                    break;
+                case Constant.RED_LED:
+                    charac = serv.getCharacteristic(UDOOBLE.UUID_LED_RED);
+                    break;
+            }
+
+            byte[] msg = new byte[2];
+            msg[0] = func;
+            msg[1] = (byte) 0x03;
+
+            mUdooBluService.writeCharacteristic(address, charac, msg);
+        }
     }
 
     private void detectSensors(String address, IReaderListener<byte []> readerListener) {
@@ -294,6 +330,7 @@ public class UdooBluManagerImpl implements UdooBluManager{
                                 }
                                 mOnResultMap.remove(address);
                             }
+
 
                             @Override
                             public void onError(UdooBluException runtimeException) {
@@ -658,33 +695,6 @@ public class UdooBluManagerImpl implements UdooBluManager{
             }
         } else if (resultListener != null)
             resultListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
-    }
-
-    public boolean turnLed(String address, int color, byte func, int millis) {
-        BluetoothGattService serv;
-        BluetoothGattCharacteristic charac = null;
-        boolean succendSend = false;
-        serv = mUdooBluService.getService(address, UDOOBLE.UUID_LED_SERV);
-        if (serv != null) {
-            switch (color) {
-                case Constant.GREEN_LED:
-                    charac = serv.getCharacteristic(UDOOBLE.UUID_LED_GREEN);
-                    break;
-                case Constant.YELLOW_LED:
-                    charac = serv.getCharacteristic(UDOOBLE.UUID_LED_YELLOW);
-                    break;
-                case Constant.RED_LED:
-                    charac = serv.getCharacteristic(UDOOBLE.UUID_LED_RED);
-                    break;
-            }
-            byte[] msg = new byte[2];
-            msg[0] = func;
-            msg[1] = (byte) 0x03;
-            mUdooBluService.writeCharacteristic(address, charac, msg);
-        } else {
-            //TODO service not found
-        }
-        return succendSend;
     }
 
     @Override
@@ -1260,6 +1270,30 @@ public class UdooBluManagerImpl implements UdooBluManager{
     @Override
     public boolean requestConnectionPriority(String address, int connectionPriority) {
         return mUdooBluService.requestConnectionPriority(address, connectionPriority);
+    }
+
+    @Override
+    public void readFirmwareVersion(final String address, final IReaderListener<byte[]> readerListener) {
+        addOperation(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                if (isBluManagerReady) {
+                    UUID servUuid = TIUUID.UUID_DEVINFO_SERV;
+                    UUID dataUuid = TIUUID.UUID_DEVINFO_FWREV;
+                    BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
+
+                    if (serv != null) {
+                        BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
+                        mUdooBluService.readCharacteristic(address, charac);
+                        mIReaderListenerMap.put(address + charac.getUuid().toString(), readerListener);
+                    } else {
+                        if (readerListener != null)
+                            readerListener.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
+                    }
+                }
+                return null;
+            }
+        });
     }
 
     @Override
