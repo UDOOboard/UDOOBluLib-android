@@ -18,6 +18,7 @@ public class IOPin {
     public IOPIN_MODE mode;
     public IOPIN_DIGITAL_VALUE digitalValue;
     public IOPIN_INDEX_VALUE indexValue;
+    public short analogValue;
 
     private IOPin(){
 
@@ -29,8 +30,14 @@ public class IOPin {
         this.digitalValue = value;
     }
 
-    public static IOPin Builder(IOPIN_PIN iopin, IOPIN_MODE iopin_mode){
-        return new IOPin(iopin, iopin_mode, IOPIN_DIGITAL_VALUE.LOW);
+    public static IOPin Builder(IOPIN_PIN iopin, IOPIN_MODE iopin_mode) {
+        IOPin ioPin = new IOPin(iopin, iopin_mode, IOPIN_DIGITAL_VALUE.LOW);
+        if (iopin_mode.compareTo(IOPin.IOPIN_MODE.ANALOG) == 0) {
+            ioPin.indexValue = IOPIN_INDEX_VALUE.ANALOG;
+        } else if (iopin_mode.compareTo(IOPIN_MODE.PWM) == 0) {
+            ioPin.indexValue = IOPIN_INDEX_VALUE.PWM;
+        }
+        return ioPin;
     }
 
 
@@ -88,7 +95,7 @@ public class IOPin {
         return GetModeValue(mode);
     }
 
-    public short getDigitalValue() {
+    public short getShortDigitalValue() {
         return GetDigitalValue(digitalValue);
     }
 

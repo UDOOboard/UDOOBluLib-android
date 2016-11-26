@@ -160,8 +160,8 @@ public enum UDOOBLESensor {
 
   IOPIN_ANALOG(UUID_IOPIN_SERV, UUID_IOPIN_ANALOG_READ, UUID_SENSOR_CONF) {
     @Override
-    public float convertADC(final byte[] value) {
-      return (float) ((short) ((value[1] << 8) | (value[0] & 0xff)));
+    public short convertADC(final byte[] value) {
+      return ((short) ((value[1] << 8) | (value[0] & 0xff)));
     }
   },
 
@@ -228,7 +228,7 @@ public enum UDOOBLESensor {
     throw new UnsupportedOperationException("Programmer error, the individual enum classes are supposed to override this method.");
   }
 
-  public float convertADC(byte[] value) {
+  public short convertADC(byte[] value) {
     throw new UnsupportedOperationException("Programmer error, the individual enum classes are supposed to override this method.");
   }
 

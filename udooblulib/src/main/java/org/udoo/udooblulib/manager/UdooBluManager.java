@@ -96,10 +96,13 @@ public interface UdooBluManager {
     void subscribeNotificationAmbientLight(String address, INotificationListener<byte[]> notificationListener, int period);
     void unSubscribeNotificationAmbientLight(String address, OnBluOperationResult<Boolean> operationResult);
 
+    void subscribeNotificationAnalog(String address, INotificationListener<byte[]> notificationListener);
+    void subscribeNotificationAnalog(String address, int interval, final INotificationListener<byte[]> notificationListener);
     void subscribeNotificationAnalog(String address, IOPin.IOPIN_PIN pin, INotificationListener<byte[]> notificationListener);
     void subscribeNotificationAnalog(String address, IOPin.IOPIN_PIN pin, INotificationListener<byte[]> notificationListener, int period);
     void unSubscribeNotificationAnalog(String address, OnBluOperationResult<Boolean> operationResult);
 
+    void setPinAnalogPwmIndex(String address, IOPin ioPin, OnBluOperationResult<Boolean> operationResult);
     void subscribeNotificationDigital(String address, INotificationListener<byte[]> notificationListener);
     void unSubscribeNotificationDigital(String address, OnBluOperationResult<Boolean> operationResult);
 
