@@ -488,13 +488,13 @@ public class UdooBluService extends Service {
                     Log.w(TAG, "Device not found.  Unable to connect.");
                 } else {
                     Log.d(TAG, "Create a new GATT connection.");
-                    bluetoothGatt = device.connectGatt(this, true, bluetoothGattCallbackBuilder());
+                    bluetoothGatt = device.connectGatt(this, false, bluetoothGattCallbackBuilder());
                     mBluetoothGatts.put(address, bluetoothGatt);
                 }
             } else {
                 Log.w(TAG, "Attempt to connect in state: " + connectionState);
                 bond(address);
-                bluetoothGatt = device.connectGatt(this, true, bluetoothGattCallbackBuilder());
+                bluetoothGatt = device.connectGatt(this, false, bluetoothGattCallbackBuilder());
                 mBluetoothGatts.put(address, bluetoothGatt);
             }
         }
