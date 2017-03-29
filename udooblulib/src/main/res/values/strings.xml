@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">UdooBluLib</string>
+    <string name="bt_not_supported">Bluetooth is not supported</string>
+    <string name="ble_not_supported">BLE is not supported</string>
+    <string name="bt_on">Bluetooth was turned  on</string>
+    <string name="bt_not_on">Bluetooth was not turned on</string>
 </resources>
