@@ -81,7 +81,23 @@ public class UdooBlu {
         }, tmpIOPins);
     }
 
-    public void writeDigital(final OnBluOperationResult<Boolean> onBluOperationResult,final IOPin... ioPins) {
+    public void digitalRead(IReaderListener<byte[]> iReaderListener, int pin , int value) {
+        IOPin.IOPIN_PIN ioPin = IOPin.GetPin(pin);
+        IOPin.IOPIN_DIGITAL_VALUE ioValue = IOPin.GetDigitalValue(value);
+
+        if(ioPin != null && ioValue != null)
+            digitalRead(iReaderListener, IOPin.Builder(ioPin, ioValue));
+    }
+
+    public void digitalWrite(int pin , int value) {
+        IOPin.IOPIN_PIN ioPin = IOPin.GetPin(pin);
+        IOPin.IOPIN_DIGITAL_VALUE ioValue = IOPin.GetDigitalValue(value);
+
+        if(ioPin != null && ioValue != null)
+            digitalWrite(null, IOPin.Builder(ioPin, ioValue));
+    }
+
+    public void digitalWrite(final OnBluOperationResult<Boolean> onBluOperationResult, final IOPin... ioPins) {
         if (iOPinVerifier(IOPin.IOPIN_MODE.DIGITAL_OUTPUT, ioPins)) {
             if(mUdooBluManager!= null) mUdooBluManager.writeDigital(mAddress, onBluOperationResult, ioPins);
         }else{
@@ -102,7 +118,14 @@ public class UdooBlu {
         }
     }
 
-    public void writePwm(IOPin.IOPIN_PIN pin,final int freq, final int dutyCycle, final OnBluOperationResult<Boolean> onResultListener) {
+
+    public void pwmWrite(int pin , final int freq, final int dutyCycle, final OnBluOperationResult<Boolean> onResultListener) {
+        IOPin.IOPIN_PIN ioPin = IOPin.GetPin(pin);
+        if(ioPin != null) pwmWrite(ioPin, freq, dutyCycle, onResultListener);
+    }
+
+
+    public void pwmWrite(IOPin.IOPIN_PIN pin, final int freq, final int dutyCycle, final OnBluOperationResult<Boolean> onResultListener) {
         final IOPin ioPin = IOPin.Builder(pin, IOPin.IOPIN_MODE.PWM);
         if (iOPinVerifier(IOPin.IOPIN_MODE.PWM, ioPin)) {
             if (indexAnalogConfig == ioPin.getIndexValue()) {
@@ -150,7 +173,7 @@ public class UdooBlu {
         }
     }
 
-    public void readDigital(final IReaderListener<byte[]> readerListener, final IOPin... pins) {
+    public void digitalRead(final IReaderListener<byte[]> readerListener, final IOPin... pins) {
         if (iOPinVerifier(IOPin.IOPIN_MODE.DIGITAL_INPUT, pins)) {
             if (mUdooBluManager != null)
                 mUdooBluManager.readDigital(mAddress, readerListener);
@@ -173,7 +196,12 @@ public class UdooBlu {
         }
     }
 
-    public void readAnalog(IOPin.IOPIN_PIN pin,final IReaderListener<byte[]> iReaderListener) {
+    public void analogRead(int pin , final IReaderListener<byte[]> iReaderListener) {
+        IOPin.IOPIN_PIN ioPin = IOPin.GetPin(pin);
+        if(ioPin != null) analogRead(ioPin, iReaderListener);
+    }
+
+    public void analogRead(IOPin.IOPIN_PIN pin, final IReaderListener<byte[]> iReaderListener) {
         final IOPin ioPin = IOPin.Builder(pin, IOPin.IOPIN_MODE.ANALOG);
         if (iOPinVerifier(ioPin)) {
             if (indexAnalogConfig == ioPin.getIndexValue()) {

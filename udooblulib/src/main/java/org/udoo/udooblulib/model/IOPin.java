@@ -182,6 +182,50 @@ public class IOPin {
         return value;
     }
 
+    public static IOPIN_DIGITAL_VALUE  GetDigitalValue(int dvalue) {
+        IOPIN_DIGITAL_VALUE value = null;
+        switch (dvalue) {
+            case 0:
+                value = IOPIN_DIGITAL_VALUE.LOW;
+                break;
+            case 1:
+                value = IOPIN_DIGITAL_VALUE.HIGH;
+                break;
+        }
+        return value;
+    }
+
+    public static IOPIN_PIN GetPin(int pin) {
+        IOPIN_PIN value = null;
+        switch (pin) {
+            case 0:
+                value = IOPIN_PIN.A0;
+                break;
+            case 1:
+                value = IOPIN_PIN.A1;
+                break;
+            case 2:
+                value = IOPIN_PIN.A2;
+                break;
+            case 3:
+                value = IOPIN_PIN.A3;
+                break;
+            case 4:
+                value = IOPIN_PIN.A4;
+                break;
+            case 5:
+                value = IOPIN_PIN.A5;
+                break;
+            case 6:
+                value = IOPIN_PIN.D6;
+                break;
+            case 7:
+                value = IOPIN_PIN.D7;
+                break;
+        }
+        return value;
+    }
+
     public static short GetDigitalValue(IOPIN_DIGITAL_VALUE value){
         return (short) (value == IOPIN_DIGITAL_VALUE.HIGH ? 1 : 0);
     }
