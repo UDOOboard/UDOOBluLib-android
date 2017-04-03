@@ -5,3 +5,6 @@
 .DS_Store
 /build
 udooblulib/build
+/.idea/markdown-navigator.xml
+/.idea/markdown-navigator/
+/.idea/misc.xml

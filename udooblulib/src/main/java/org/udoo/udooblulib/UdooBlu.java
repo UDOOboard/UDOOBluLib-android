@@ -323,11 +323,11 @@ public class UdooBlu {
     }
 
     public void subscribeNotificationAmbientLight(INotificationListener<byte[]> notificationListener) {
-        if(mUdooBluManager!= null) setNotification(mAddress, SENSORS.HUM, UDOOBLESensor.HUMIDITY, Constant.NOTIFICATIONS_PERIOD, notificationListener);
+        if(mUdooBluManager!= null) setNotification(mAddress, SENSORS.AMB_LIG, UDOOBLESensor.AMBIENT_LIGHT, Constant.NOTIFICATIONS_PERIOD, notificationListener);
     }
 
     public void subscribeNotificationAmbientLight(INotificationListener<byte[]> notificationListener, int period) {
-        if(mUdooBluManager!= null) setNotification(mAddress, SENSORS.HUM, UDOOBLESensor.HUMIDITY, period, notificationListener);
+        if(mUdooBluManager!= null) setNotification(mAddress, SENSORS.AMB_LIG, UDOOBLESensor.AMBIENT_LIGHT, period, notificationListener);
     }
 
     public void unSubscribeNotificationAmbientLight(OnBluOperationResult<Boolean> operationResult) {
