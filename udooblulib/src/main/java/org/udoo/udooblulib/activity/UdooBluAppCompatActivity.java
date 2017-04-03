@@ -300,9 +300,8 @@ public abstract class UdooBluAppCompatActivity extends AppCompatActivity {
     }
 
     public boolean isLocationProviderEnabled(LocationManager locationManager) {
-        UiModeManager uiModeManager = (UiModeManager) getSystemService(UI_MODE_SERVICE);
-        return locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        return (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
                 || locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-                (uiModeManager != null && uiModeManager.getCurrentModeType() == Configuration.UI_MODE_TYPE_WATCH);
+                (Build.MODEL.equals("UDOONEO-MX6SX") || Build.MODEL.equals("UDOO-MX6DQ")));
     }
 }

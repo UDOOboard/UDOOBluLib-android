@@ -261,12 +261,17 @@ public class UdooBluManager {
     }
 
 
+    /**
+    * @param period in ms (1 ms to 6000ms)
+    * */
     private void setNotificationPeriod(final String address, final UDOOBLESensor udoobleSensor, int period, OnBluOperationResult<Boolean> operationResult) {
         UUID servUuid = udoobleSensor.getService();
         UUID dataUuid = UDOOBLE.UUID_NOTIFICATION_PERI;
         BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
 
         if (serv != null) {
+            //Value unit in 10ms , is unsigned integer 16 bit. > 0 and < 6000 (6000 -> 60 s)
+            period /= 10;
             BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
             byte[] msg = new byte[2];
             byte value[] = BitUtility.To2Bytes(period);
