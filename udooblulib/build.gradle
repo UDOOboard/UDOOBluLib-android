@@ -2,11 +2,11 @@ apply plugin: 'com.android.library'
 
 
 android {
-    compileSdkVersion 24
-    buildToolsVersion '25.0.0'
+    compileSdkVersion 25
+    buildToolsVersion '25.0.2'
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 24
+        targetSdkVersion 25
         versionCode 3
         versionName '0.4'
     }
@@ -20,6 +20,12 @@ android {
     }
 }
 
+dependencies {
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+    testCompile 'junit:junit:4.12'
+    compile 'com.android.support:appcompat-v7:25.3.1'
+}
+
 ext {
     bintrayRepo = 'maven'
     bintrayName = 'udoo-blu'
@@ -30,38 +36,23 @@ ext {
 
     libraryDescription = 'Library for control Udoo Blu board (bluetooth low energy)'
 
-    siteUrl = 'https://github.com/harlem88/UDOOBluLib'
-    gitUrl = 'https://github.com/harlem88/UDOOBluLib.git'
+    siteUrl = 'https://github.com/UDOOboard/UDOOBluLib-android'
+    gitUrl =  'https://github.com/UDOOboard/UDOOBluLib-android.git'
 
     libraryVersion = android.defaultConfig.versionName
+    developerId = 'udooboard'
+    developerName = 'udooboard'
 
-    developerId = 'harlem88'
-    developerName = 'Antonio Gisondi'
+    developerEmail = 'social@udoo.org'
 
-    developerEmail = 'harlem88.ant@gmail.com'
+    licenseName = 'GNU General Public License v3.0'
 
     licenseName = 'The Apache Software License, Version 2.0'
 
-    licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-    allLicenses = ["Apache-2.0"]
-}
-
-dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:24.2.1'
+   licenseUrl = 'https://opensource.org/licenses/gpl-3.0.html'
+   allLicenses = ["GPL-3.0"]
 }
 
 apply from : '../install.gradle'
 apply from : '../bintray.gradle'
 
-task makeJar(type: Copy) {
-    from('build/intermediates/bundles/release/')
-    into('build/outputs/')
-    include('classes.jar')
-    rename ('classes.jar', 'udooblu.jar')
-    into('release/') //you can change this directory where you want to copy your .jar
-}
-task clearJar(type: Delete) {
-    delete 'build/libs/udooblu.jar'
-}

@@ -3,9 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/UDOOBluLibMaster.iml" filepath="$PROJECT_DIR$/UDOOBluLibMaster.iml" />
-      <module fileurl="file://$PROJECT_DIR$/bluHomeExample/bluHomeExample.iml" filepath="$PROJECT_DIR$/bluHomeExample/bluHomeExample.iml" />
       <module fileurl="file://$PROJECT_DIR$/udooblulib/udooblulib.iml" filepath="$PROJECT_DIR$/udooblulib/udooblulib.iml" />
-      <module fileurl="file://$PROJECT_DIR$/udoobluwearexample/udoobluwearexample.iml" filepath="$PROJECT_DIR$/udoobluwearexample/udoobluwearexample.iml" />
     </modules>
   </component>
 </project>

@@ -18,14 +18,14 @@ if (project.hasProperty("android")) { // Android libraries
         from sourceSets.main.allSource
     }
 }
-
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from javadoc.destinationDir
-}
+//
+//task javadocJar(type: Jar, dependsOn: javadoc) {
+//    classifier = 'javadoc'
+//    from javadoc.destinationDir
+//}
 
 artifacts {
-    archives javadocJar
+    //archives javadocJar
     archives sourcesJar
 }
 
@@ -47,6 +47,7 @@ bintray {
         licenses = allLicenses
         publish = true
         publicDownloadNumbers = true
+        labels = ['aar', 'android', 'serial']
         version {
             desc = libraryDescription
             gpg {
