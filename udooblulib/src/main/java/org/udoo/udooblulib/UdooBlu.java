@@ -47,6 +47,7 @@ public class UdooBlu {
         mUdooBluManager = udooBluManager;
         mIOPins = new IOPin[8];
         this.sensorsDetected = sensorsDetected;
+        indexAnalogConfig = -1;
     }
 
     public void readFirmwareVersion(IReaderListener<byte[]> readerListener) {

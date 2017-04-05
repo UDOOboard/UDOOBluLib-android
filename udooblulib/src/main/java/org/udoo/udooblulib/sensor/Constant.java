@@ -17,7 +17,7 @@ public class Constant {
     public static final int GATT_TIMEOUT = 300; // milliseconds
 
     // Sensors parameter
-    public final static int NOTIFICATIONS_PERIOD = 10;
+    public final static int NOTIFICATIONS_PERIOD = 100;
 
     // Activity
     public static final String EXTRA_DEVICE = "EXTRA_DEVICE";

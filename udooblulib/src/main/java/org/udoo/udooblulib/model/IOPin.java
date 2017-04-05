@@ -2,10 +2,12 @@ package org.udoo.udooblulib.model;
 
 import org.udoo.udooblulib.utils.BitUtility;
 
+import java.io.Serializable;
+
 /**
  * Created by harlem88 on 23/02/16.
  */
-public class IOPin {
+public class IOPin implements Serializable{
     public enum IOPIN_PIN {D7, D6, A5, A4, A3, A2, A1, A0}
     public enum IOPIN_MODE {DIGITAL_OUTPUT, DIGITAL_INPUT, ANALOG, PWM}
     public enum IOPIN_DIGITAL_VALUE{LOW, HIGH}

@@ -247,42 +247,60 @@ public class UdooBluManager {
     }
 
     private void setNotification(final String address, final UDOOBLESensor udoobleSensor, final INotificationListener<byte[]> iNotificationListener) {
-        UUID servUuid = udoobleSensor.getService();
-        UUID dataUuid = udoobleSensor.getData();
-        BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
+        if (isBluManagerReady) {
+            addOperation(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    UUID servUuid = udoobleSensor.getService();
+                    UUID dataUuid = udoobleSensor.getData();
+                    BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
 
-        if (serv != null) {
-            BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
-            mINotificationListenerMap.put(address + charac.getUuid().toString(), iNotificationListener);
-            mUdooBluService.setCharacteristicNotification(address, charac, true);
-            Log.i(TAG, "setNotification: ");
-        } else if (iNotificationListener != null)
-            iNotificationListener.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
+                    if (serv != null) {
+                        BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
+                        mINotificationListenerMap.put(address + charac.getUuid().toString(), iNotificationListener);
+                        mUdooBluService.setCharacteristicNotification(address, charac, true);
+                        Log.i(TAG, "setNotification: ");
+                    } else if (iNotificationListener != null)
+                        iNotificationListener.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
+                    return null;
+                }
+            });
+        } else if (BuildConfig.DEBUG)
+            Log.i(TAG, "BluManager not ready");
     }
 
-
     /**
-    * @param period in ms (1 ms to 6000ms)
-    * */
-    private void setNotificationPeriod(final String address, final UDOOBLESensor udoobleSensor, int period, OnBluOperationResult<Boolean> operationResult) {
-        UUID servUuid = udoobleSensor.getService();
-        UUID dataUuid = UDOOBLE.UUID_NOTIFICATION_PERI;
-        BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
+     * @param period in ms (1 ms to 6000ms)
+     */
+    private void setNotificationPeriod(final String address, final UDOOBLESensor udoobleSensor,final int period,final OnBluOperationResult<Boolean> operationResult) {
+        if (isBluManagerReady) {
+            addOperation(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    UUID servUuid = udoobleSensor.getService();
+                    UUID dataUuid = UDOOBLE.UUID_NOTIFICATION_PERI;
+                    BluetoothGattService serv = mUdooBluService.getService(address, servUuid);
 
-        if (serv != null) {
-            //Value unit in 10ms , is unsigned integer 16 bit. > 0 and < 6000 (6000 -> 60 s)
-            period /= 10;
-            BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
-            byte[] msg = new byte[2];
-            byte value[] = BitUtility.To2Bytes(period);
-            msg[1] = value[0];
-            msg[0] = value[1];
+                    if (serv != null) {
+                        //Value unit in 10ms , is unsigned integer 16 bit. > 0 and < 6000 (6000 -> 60 s)
+                        int tmpPeriod = period / 10;
+                        BluetoothGattCharacteristic charac = serv.getCharacteristic(dataUuid);
+                        byte[] msg = new byte[2];
+                        byte value[] = BitUtility.To2Bytes(tmpPeriod);
+                        msg[1] = value[0];
+                        msg[0] = value[1];
 
-            mOnResultMap.put(address, operationResult);
-            mUdooBluService.writeCharacteristic(address, charac, msg);
-            Log.i(TAG, "setNotificationPeriod: ");
-        } else if (operationResult != null)
-            operationResult.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
+                        mOnResultMap.put(address, operationResult);
+                        mUdooBluService.writeCharacteristic(address, charac, msg);
+                        Log.i(TAG, "setNotificationPeriod: ");
+                    } else if (operationResult != null)
+                        operationResult.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
+
+                    return null;
+                }
+            });
+        } else if (BuildConfig.DEBUG)
+            Log.i(TAG, "BluManager not ready");
     }
 
     public void setNotification(final String address, final UDOOBLESensor udoobleSensor, final int period, final INotificationListener<byte[]> iNotificationListener) {
@@ -420,31 +438,35 @@ public class UdooBluManager {
         }
     }
 
-    public void setPinAnalogOrPwmIndex(String address, IOPin ioPin, OnBluOperationResult<Boolean> onResultListener) {
+    public void setPinAnalogOrPwmIndex(final String address, final IOPin ioPin, final OnBluOperationResult<Boolean> onResultListener) {
         if (isBluManagerReady) {
+            addOperation(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    UUID service, characteristic;
+                    byte[] msg;
 
-            UUID service, characteristic;
-            byte[] msg;
+                    service = UDOOBLE.UUID_IOPIN_SERV;
+                    characteristic = UDOOBLE.UUID_IOPIN_PWM_ANALOG_INDEX;
 
-            service = UDOOBLE.UUID_IOPIN_SERV;
-            characteristic = UDOOBLE.UUID_IOPIN_PWM_ANALOG_INDEX;
+                    msg = new byte[1];
+                    msg[0] = ioPin.getIndexValue();
 
-            msg = new byte[1];
-            msg[0] = ioPin.getIndexValue();
+                    BluetoothGattService serv = mUdooBluService.getService(address, service);
+                    if (serv != null) {
+                        BluetoothGattCharacteristic charac = serv.getCharacteristic(characteristic);
+                        mOnResultMap.put(address, onResultListener);
 
-            BluetoothGattService serv = mUdooBluService.getService(address, service);
-            if (serv != null) {
-                BluetoothGattCharacteristic charac = serv.getCharacteristic(characteristic);
-                mOnResultMap.put(address, onResultListener);
+                        if (BuildConfig.DEBUG)
+                            BitUtility.LogBinValue(msg, false);
 
-                if (BuildConfig.DEBUG)
-                    BitUtility.LogBinValue(msg, false);
+                        mUdooBluService.writeCharacteristic(address, charac, msg);
+                    } else if (onResultListener != null)
+                        onResultListener.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
 
-                mUdooBluService.writeCharacteristic(address, charac, msg);
-            } else if (onResultListener != null)
-                onResultListener.onError(new UdooBluException(UdooBluException.BLU_GATT_SERVICE_NOT_FOUND));
-
-
+                    return null;
+                }
+            });
         } else if (onResultListener != null) {
             onResultListener.onError(new UdooBluException(UdooBluException.BLU_SERVICE_NOT_READY));
         }
