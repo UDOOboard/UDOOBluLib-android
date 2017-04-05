@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/UDOOBluLibMaster.iml" filepath="$PROJECT_DIR$/UDOOBluLibMaster.iml" />
       <module fileurl="file://$PROJECT_DIR$/udooblulib/udooblulib.iml" filepath="$PROJECT_DIR$/udooblulib/udooblulib.iml" />
+      <module fileurl="file://$PROJECT_DIR$/udooblutest/udooblutest.iml" filepath="$PROJECT_DIR$/udooblutest/udooblutest.iml" />
     </modules>
   </component>
 </project>
