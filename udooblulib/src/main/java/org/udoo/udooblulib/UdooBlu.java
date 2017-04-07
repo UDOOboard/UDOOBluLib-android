@@ -36,7 +36,7 @@ public class UdooBlu {
      * 0x00 Digital Output
      * 0x01 Digital Input
      * 0x02 Analog
-     * 0x03 PWM
+     * 0x03 DIGITAL_PWM
      **/
     private byte iOPinConfig[] = new byte[8];
     private byte indexAnalogConfig;
@@ -82,31 +82,52 @@ public class UdooBlu {
         }, tmpIOPins);
     }
 
-    public void digitalRead(IReaderListener<byte[]> iReaderListener, int pin , int value) {
-        IOPin.IOPIN_PIN ioPin = IOPin.GetPin(pin);
-        IOPin.IOPIN_DIGITAL_VALUE ioValue = IOPin.GetDigitalValue(value);
+    public void setIoPinMode(int pin, IOPin.MODE mode) {
+        final IOPin[] tmpIOPins = mergeWithLocalIOPinConfig(IOPin.Builder(IOPin.GetPin(pin), mode));
+        if(mUdooBluManager!= null) mUdooBluManager.setIoPinMode(mAddress, new OnBluOperationResult<Boolean>() {
+            @Override
+            public void onSuccess(Boolean aBoolean) {
+                mIOPins = tmpIOPins.clone();
+            }
 
-        if(ioPin != null && ioValue != null)
+            @Override
+            public void onError(UdooBluException runtimeException) {}
+        }, tmpIOPins);
+    };
+
+    public void digitalRead(IReaderListener<byte[]> iReaderListener, int pin) {
+        IOPin.PIN ioPin = IOPin.GetPin(pin);
+        IOPin.DIGITAL_VALUE ioValue = IOPin.DIGITAL_VALUE.LOW;
+
+        if(ioPin != null)
             digitalRead(iReaderListener, IOPin.Builder(ioPin, ioValue));
     }
 
     public void digitalWrite(int pin , int value) {
-        IOPin.IOPIN_PIN ioPin = IOPin.GetPin(pin);
-        IOPin.IOPIN_DIGITAL_VALUE ioValue = IOPin.GetDigitalValue(value);
+        IOPin.PIN ioPin = IOPin.GetPin(pin);
+        IOPin.DIGITAL_VALUE ioValue = IOPin.GetDigitalValue(value);
+
+        if(ioPin != null && ioValue != null)
+            digitalWrite(null, IOPin.Builder(ioPin, ioValue));
+    }
+
+    public void digitalWrite(int pin , IOPin.DIGITAL_VALUE value) {
+        IOPin.PIN ioPin = IOPin.GetPin(pin);
+        IOPin.DIGITAL_VALUE ioValue = IOPin.GetDigitalValue(value.ordinal());
 
         if(ioPin != null && ioValue != null)
             digitalWrite(null, IOPin.Builder(ioPin, ioValue));
     }
 
     public void digitalWrite(final OnBluOperationResult<Boolean> onBluOperationResult, final IOPin... ioPins) {
-        if (iOPinVerifier(IOPin.IOPIN_MODE.DIGITAL_OUTPUT, ioPins)) {
+        if (iOPinVerifier(IOPin.MODE.DIGITAL_OUTPUT, ioPins)) {
             if(mUdooBluManager!= null) mUdooBluManager.writeDigital(mAddress, onBluOperationResult, ioPins);
         }else{
-            iOPinModeBuilder(IOPin.IOPIN_MODE.DIGITAL_OUTPUT, ioPins);
+            iOPinModeBuilder(IOPin.MODE.DIGITAL_OUTPUT, ioPins);
             setIoPinMode(new OnBluOperationResult<Boolean>() {
                 @Override
                 public void onSuccess(Boolean aBoolean) {
-                    setLocaliOPinConfig(IOPin.IOPIN_MODE.DIGITAL_OUTPUT, ioPins);
+                    setLocaliOPinConfig(IOPin.MODE.DIGITAL_OUTPUT, ioPins);
                     if(mUdooBluManager!= null) mUdooBluManager.writeDigital(mAddress, onBluOperationResult, ioPins);
                 }
 
@@ -121,19 +142,19 @@ public class UdooBlu {
 
 
     public void pwmWrite(int pin , final int freq, final int dutyCycle, final OnBluOperationResult<Boolean> onResultListener) {
-        IOPin.IOPIN_PIN ioPin = IOPin.GetPin(pin);
+        IOPin.PIN ioPin = IOPin.GetPin(pin);
         if(ioPin != null) pwmWrite(ioPin, freq, dutyCycle, onResultListener);
     }
 
 
-    public void pwmWrite(IOPin.IOPIN_PIN pin, final int freq, final int dutyCycle, final OnBluOperationResult<Boolean> onResultListener) {
-        final IOPin ioPin = IOPin.Builder(pin, IOPin.IOPIN_MODE.PWM);
-        if (iOPinVerifier(IOPin.IOPIN_MODE.PWM, ioPin)) {
+    public void pwmWrite(IOPin.PIN pin, final int freq, final int dutyCycle, final OnBluOperationResult<Boolean> onResultListener) {
+        final IOPin ioPin = IOPin.Builder(pin, IOPin.MODE.DIGITAL_PWM);
+        if (iOPinVerifier(IOPin.MODE.DIGITAL_PWM, ioPin)) {
             if (indexAnalogConfig == ioPin.getIndexValue()) {
                 if(mUdooBluManager != null) mUdooBluManager.writePwm(mAddress, freq, dutyCycle, onResultListener);
             } else {
                 if (mUdooBluManager != null)
-                    mUdooBluManager.setPinAnalogOrPwmIndex(mAddress, IOPin.Builder(pin, IOPin.IOPIN_INDEX_VALUE.PWM), new OnBluOperationResult<Boolean>() {
+                    mUdooBluManager.setPinAnalogOrPwmIndex(mAddress, IOPin.Builder(pin, IOPin.INDEX_VALUE.PWM), new OnBluOperationResult<Boolean>() {
                         @Override
                         public void onSuccess(Boolean aBoolean) {
                             if (aBoolean) {
@@ -153,12 +174,12 @@ public class UdooBlu {
                     });
             }
         }else{
-            iOPinModeBuilder(IOPin.IOPIN_MODE.PWM, ioPin);
+            iOPinModeBuilder(IOPin.MODE.DIGITAL_PWM, ioPin);
             setIoPinMode(new OnBluOperationResult<Boolean>() {
                 @Override
                 public void onSuccess(Boolean aBoolean) {
                     if (aBoolean) {
-                        setLocaliOPinConfig(IOPin.IOPIN_MODE.PWM, ioPin);
+                        setLocaliOPinConfig(IOPin.MODE.DIGITAL_PWM, ioPin);
                         if(mUdooBluManager != null) mUdooBluManager.writePwm(mAddress, freq, dutyCycle, onResultListener);
                     } else if (onResultListener != null) {
                         onResultListener.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
@@ -175,15 +196,15 @@ public class UdooBlu {
     }
 
     public void digitalRead(final IReaderListener<byte[]> readerListener, final IOPin... pins) {
-        if (iOPinVerifier(IOPin.IOPIN_MODE.DIGITAL_INPUT, pins)) {
+        if (iOPinVerifier(IOPin.MODE.DIGITAL_INPUT, pins)) {
             if (mUdooBluManager != null)
                 mUdooBluManager.readDigital(mAddress, readerListener);
         } else {
-            iOPinModeBuilder(IOPin.IOPIN_MODE.DIGITAL_INPUT, pins);
+            iOPinModeBuilder(IOPin.MODE.DIGITAL_INPUT, pins);
             setIoPinMode(new OnBluOperationResult<Boolean>() {
                 @Override
                 public void onSuccess(Boolean aBoolean) {
-                    setLocaliOPinConfig(IOPin.IOPIN_MODE.DIGITAL_INPUT, pins);
+                    setLocaliOPinConfig(IOPin.MODE.DIGITAL_INPUT, pins);
                     if (mUdooBluManager != null)
                         mUdooBluManager.readDigital(mAddress, readerListener);
                 }
@@ -198,12 +219,12 @@ public class UdooBlu {
     }
 
     public void analogRead(int pin , final IReaderListener<byte[]> iReaderListener) {
-        IOPin.IOPIN_PIN ioPin = IOPin.GetPin(pin);
+        IOPin.PIN ioPin = IOPin.GetPin(pin);
         if(ioPin != null) analogRead(ioPin, iReaderListener);
     }
 
-    public void analogRead(IOPin.IOPIN_PIN pin, final IReaderListener<byte[]> iReaderListener) {
-        final IOPin ioPin = IOPin.Builder(pin, IOPin.IOPIN_MODE.ANALOG);
+    public void analogRead(IOPin.PIN pin, final IReaderListener<byte[]> iReaderListener) {
+        final IOPin ioPin = IOPin.Builder(pin, IOPin.MODE.ANALOG_INPUT);
         if (iOPinVerifier(ioPin)) {
             if (indexAnalogConfig == ioPin.getIndexValue()) {
                 if(mUdooBluManager!= null) mUdooBluManager.readAnalog(mAddress, iReaderListener);
@@ -335,12 +356,12 @@ public class UdooBlu {
         if(mUdooBluManager!= null) mUdooBluManager.unSubscribeNotificationAmbientLight(mAddress, operationResult);
     }
 
-    public void subscribeNotificationAnalog(IOPin.IOPIN_PIN pin, final INotificationListener<byte[]> notificationListener) {
+    public void subscribeNotificationAnalog(IOPin.PIN pin, final INotificationListener<byte[]> notificationListener) {
         subscribeNotificationAnalog(pin, notificationListener, Constant.NOTIFICATIONS_PERIOD);
     }
 
-    public void subscribeNotificationAnalog(IOPin.IOPIN_PIN pin, final INotificationListener<byte[]> notificationListener,final int period) {
-        final IOPin ioPin = IOPin.Builder(pin, IOPin.IOPIN_MODE.ANALOG);
+    public void subscribeNotificationAnalog(IOPin.PIN pin, final INotificationListener<byte[]> notificationListener, final int period) {
+        final IOPin ioPin = IOPin.Builder(pin, IOPin.MODE.ANALOG_INPUT);
         if (iOPinVerifier(ioPin)) {
             if (indexAnalogConfig == ioPin.getIndexValue()) {
                 if(mUdooBluManager!= null) mUdooBluManager.setNotification(mAddress, UDOOBLESensor.IOPIN_ANALOG, period, notificationListener);
@@ -370,14 +391,14 @@ public class UdooBlu {
 
     /*notified on pin change*/
     public void subscribeNotificationDigital(final INotificationListener<byte[]> notificationListener, final IOPin... pins) {
-        if (iOPinVerifier(IOPin.IOPIN_MODE.DIGITAL_INPUT, pins)) {
+        if (iOPinVerifier(IOPin.MODE.DIGITAL_INPUT, pins)) {
             if(mUdooBluManager!= null) mUdooBluManager.subscribeNotificationDigital(mAddress, notificationListener);
         } else {
-            iOPinModeBuilder(IOPin.IOPIN_MODE.DIGITAL_INPUT, pins);
+            iOPinModeBuilder(IOPin.MODE.DIGITAL_INPUT, pins);
             setIoPinMode(new OnBluOperationResult<Boolean>() {
                 @Override
                 public void onSuccess(Boolean aBoolean) {
-                    setLocaliOPinConfig(IOPin.IOPIN_MODE.DIGITAL_INPUT, pins);
+                    setLocaliOPinConfig(IOPin.MODE.DIGITAL_INPUT, pins);
                     if(mUdooBluManager!= null) mUdooBluManager.subscribeNotificationDigital(mAddress, notificationListener);
                 }
                 @Override
@@ -450,14 +471,14 @@ public class UdooBlu {
         }
     }
 
-    private void configAnalog(final IOPin.IOPIN_PIN pin, final OnBluOperationResult<Boolean> operationResult){
-        final IOPin ioPin = IOPin.Builder(pin, IOPin.IOPIN_MODE.ANALOG);
+    private void configAnalog(final IOPin.PIN pin, final OnBluOperationResult<Boolean> operationResult){
+        final IOPin ioPin = IOPin.Builder(pin, IOPin.MODE.ANALOG_INPUT);
         if (iOPinVerifier(ioPin)) {
             if (indexAnalogConfig == ioPin.getIndexValue()) {
                 if (operationResult != null)
                     operationResult.onSuccess(true);
             } else {
-                mUdooBluManager.setPinAnalogOrPwmIndex(mAddress, IOPin.Builder(pin, IOPin.IOPIN_INDEX_VALUE.ANALOG), new OnBluOperationResult<Boolean>() {
+                mUdooBluManager.setPinAnalogOrPwmIndex(mAddress, IOPin.Builder(pin, IOPin.INDEX_VALUE.ANALOG), new OnBluOperationResult<Boolean>() {
                     @Override
                     public void onSuccess(Boolean aBoolean) {
                         if (aBoolean) {
@@ -478,7 +499,7 @@ public class UdooBlu {
                 });
             }
         } else {
-            iOPinModeBuilder(IOPin.IOPIN_MODE.ANALOG, ioPin);
+            iOPinModeBuilder(IOPin.MODE.ANALOG_INPUT, ioPin);
             setIoPinMode(new OnBluOperationResult<Boolean>() {
                 @Override
                 public void onSuccess(Boolean aBoolean) {
@@ -498,12 +519,12 @@ public class UdooBlu {
         }
     }
 
-    private void setLocaliOPinConfig(IOPin.IOPIN_MODE mode, IOPin... ioPins) {
+    private void setLocaliOPinConfig(IOPin.MODE mode, IOPin... ioPins) {
         for (int i = 0; i < iOPinConfig.length && i < ioPins.length; i++)
             iOPinConfig[ioPins[i].pin.ordinal()] = (byte) mode.ordinal();
     }
 
-    private boolean iOPinVerifier(IOPin.IOPIN_MODE mode, IOPin... ioPins) {
+    private boolean iOPinVerifier(IOPin.MODE mode, IOPin... ioPins) {
         boolean configured = true;
         for (int i = 0; i < iOPinConfig.length && i < ioPins.length; i++) {
             if (iOPinConfig[ioPins[i].pin.ordinal()] != mode.ordinal())
@@ -528,7 +549,7 @@ public class UdooBlu {
         return configured;
     }
 
-    private void iOPinModeBuilder(IOPin.IOPIN_MODE mode, IOPin... ioPins) {
+    private void iOPinModeBuilder(IOPin.MODE mode, IOPin... ioPins) {
         for (int i = 0; i < ioPins.length; i++) {
             ioPins[i].mode = mode;
         }

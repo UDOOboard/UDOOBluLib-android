@@ -55,7 +55,7 @@ public interface UdooBluManager2 {
     void blinkLed(String address, int color, boolean blink);
 
     void setIoPinMode(String address, final OnBluOperationResult<Boolean> onResultListener, IOPin... ioPins);
-    void configAnalog(final String address, final IOPin.IOPIN_PIN pin, final OnBluOperationResult<Boolean> operationResult);
+    void configAnalog(final String address, final IOPin.PIN pin, final OnBluOperationResult<Boolean> operationResult);
     void writeDigital(final String address, final OnBluOperationResult<Boolean> onBluOperationResult, final IOPin... ioPins);
     void setPinAnalogOrPwmIndex(String address, IOPin ioPin, OnBluOperationResult<Boolean> onResultListener);
     void writePwm(final String address, final int freq, final int dutyCycle, final OnBluOperationResult<Boolean> onResultListener);
@@ -102,8 +102,8 @@ public interface UdooBluManager2 {
 
     void subscribeNotificationAnalog(String address, INotificationListener<byte[]> notificationListener);
     void subscribeNotificationAnalog(String address, int interval, final INotificationListener<byte[]> notificationListener);
-    void subscribeNotificationAnalog(String address, IOPin.IOPIN_PIN pin, INotificationListener<byte[]> notificationListener);
-    void subscribeNotificationAnalog(String address, IOPin.IOPIN_PIN pin, INotificationListener<byte[]> notificationListener, int period);
+    void subscribeNotificationAnalog(String address, IOPin.PIN pin, INotificationListener<byte[]> notificationListener);
+    void subscribeNotificationAnalog(String address, IOPin.PIN pin, INotificationListener<byte[]> notificationListener, int period);
     void unSubscribeNotificationAnalog(String address, OnBluOperationResult<Boolean> operationResult);
 
     void setPinAnalogPwmIndex(String address, IOPin ioPin, OnBluOperationResult<Boolean> operationResult);
@@ -115,6 +115,6 @@ public interface UdooBluManager2 {
      * @param freq value 3 to 24000000 (24 MHz)
      * @param dutyCycle value 0 to 100
      * */
-    boolean pwmWrite(IOPin.IOPIN_PIN pin, int freq, int dutyCycle);
+    boolean pwmWrite(IOPin.PIN pin, int freq, int dutyCycle);
 
 }

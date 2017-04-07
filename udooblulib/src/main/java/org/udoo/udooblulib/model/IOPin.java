@@ -8,47 +8,47 @@ import java.io.Serializable;
  * Created by harlem88 on 23/02/16.
  */
 public class IOPin implements Serializable{
-    public enum IOPIN_PIN {D7, D6, A5, A4, A3, A2, A1, A0}
-    public enum IOPIN_MODE {DIGITAL_OUTPUT, DIGITAL_INPUT, ANALOG, PWM}
-    public enum IOPIN_DIGITAL_VALUE{LOW, HIGH}
-    public enum IOPIN_INDEX_VALUE{ANALOG, PWM}
+    public enum PIN {D7, D6, A5, A4, A3, A2, A1, A0}
+    public enum MODE {DIGITAL_OUTPUT, DIGITAL_INPUT, ANALOG_INPUT, DIGITAL_PWM}
+    public enum DIGITAL_VALUE {LOW, HIGH}
+    public enum INDEX_VALUE {ANALOG, PWM}
 
     public boolean isAnalog;
     public boolean isOutput;
     public boolean isNotification;
-    public IOPIN_PIN pin;
-    public IOPIN_MODE mode;
-    public IOPIN_DIGITAL_VALUE digitalValue;
-    public IOPIN_INDEX_VALUE indexValue;
+    public PIN pin;
+    public MODE mode;
+    public DIGITAL_VALUE digitalValue;
+    public INDEX_VALUE indexValue;
     public short analogValue;
 
     private IOPin(){
 
     }
 
-    private IOPin(IOPIN_PIN iopin, IOPIN_MODE iopin_mode, IOPIN_DIGITAL_VALUE value){
+    private IOPin(PIN iopin, MODE _mode, DIGITAL_VALUE value){
         this.pin = iopin;
-        this.mode = iopin_mode;
+        this.mode = _mode;
         this.digitalValue = value;
     }
 
-    public static IOPin Builder(IOPIN_PIN iopin, IOPIN_MODE iopin_mode) {
-        IOPin ioPin = new IOPin(iopin, iopin_mode, IOPIN_DIGITAL_VALUE.LOW);
-        if (iopin_mode.compareTo(IOPin.IOPIN_MODE.ANALOG) == 0) {
-            ioPin.indexValue = IOPIN_INDEX_VALUE.ANALOG;
-        } else if (iopin_mode.compareTo(IOPIN_MODE.PWM) == 0) {
-            ioPin.indexValue = IOPIN_INDEX_VALUE.PWM;
+    public static IOPin Builder(PIN iopin, MODE _mode) {
+        IOPin ioPin = new IOPin(iopin, _mode, DIGITAL_VALUE.LOW);
+        if (_mode.compareTo(MODE.ANALOG_INPUT) == 0) {
+            ioPin.indexValue = INDEX_VALUE.ANALOG;
+        } else if (_mode.compareTo(MODE.DIGITAL_PWM) == 0) {
+            ioPin.indexValue = INDEX_VALUE.PWM;
         }
         return ioPin;
     }
 
 
-    public static IOPin Builder(IOPIN_PIN iopin, IOPIN_DIGITAL_VALUE value){
-        return new IOPin(iopin, IOPIN_MODE.DIGITAL_OUTPUT, value);
+    public static IOPin Builder(PIN iopin, DIGITAL_VALUE value){
+        return new IOPin(iopin, MODE.DIGITAL_OUTPUT, value);
     }
 
 
-    public static IOPin Builder(IOPIN_PIN iopin, IOPIN_INDEX_VALUE iopinIndexValue){
+    public static IOPin Builder(PIN iopin, INDEX_VALUE iopinIndexValue){
         IOPin ioPin = new IOPin();
         ioPin.pin = iopin;
         ioPin.indexValue = iopinIndexValue;
@@ -101,7 +101,7 @@ public class IOPin implements Serializable{
         return GetDigitalValue(digitalValue);
     }
 
-    public static byte GetPinValue(IOPin.IOPIN_PIN pin) {
+    public static byte GetPinValue(PIN pin) {
         byte value = 0;
 
         switch (pin) {
@@ -133,15 +133,15 @@ public class IOPin implements Serializable{
         return value;
     }
 
-    public static byte GetIndexValue(IOPin.IOPIN_PIN pin, IOPIN_INDEX_VALUE iopinIndexValue) {
+    public static byte GetIndexValue(PIN pin, INDEX_VALUE iopinIndexValue) {
         byte value = 0;
 
         switch (pin) {
             case D7:
-                value =  iopinIndexValue == IOPIN_INDEX_VALUE.ANALOG ? BitUtility.ToUnsignedByte(0xff) : 7;
+                value =  iopinIndexValue == INDEX_VALUE.ANALOG ? BitUtility.ToUnsignedByte(0xff) : 7;
                 break;
             case D6:
-                value =  iopinIndexValue == IOPIN_INDEX_VALUE.ANALOG ? BitUtility.ToUnsignedByte(0xff) : 6;
+                value =  iopinIndexValue == INDEX_VALUE.ANALOG ? BitUtility.ToUnsignedByte(0xff) : 6;
                 break;
             case A5:
                 value = 5;
@@ -165,7 +165,7 @@ public class IOPin implements Serializable{
         return value;
     }
 
-    public static byte GetModeValue(IOPIN_MODE mode) {
+    public static byte GetModeValue(MODE mode) {
         byte value = 0;
         switch (mode) {
             case DIGITAL_OUTPUT:
@@ -174,61 +174,61 @@ public class IOPin implements Serializable{
             case DIGITAL_INPUT:
                 value = 1;
                 break;
-            case ANALOG:
+            case ANALOG_INPUT:
                 value = 2;
                 break;
-            case PWM:
+            case DIGITAL_PWM:
                 value = 3;
                 break;
         }
         return value;
     }
 
-    public static IOPIN_DIGITAL_VALUE  GetDigitalValue(int dvalue) {
-        IOPIN_DIGITAL_VALUE value = null;
+    public static DIGITAL_VALUE GetDigitalValue(int dvalue) {
+        DIGITAL_VALUE value = null;
         switch (dvalue) {
             case 0:
-                value = IOPIN_DIGITAL_VALUE.LOW;
+                value = DIGITAL_VALUE.LOW;
                 break;
             case 1:
-                value = IOPIN_DIGITAL_VALUE.HIGH;
+                value = DIGITAL_VALUE.HIGH;
                 break;
         }
         return value;
     }
 
-    public static IOPIN_PIN GetPin(int pin) {
-        IOPIN_PIN value = null;
+    public static PIN GetPin(int pin) {
+        PIN value = null;
         switch (pin) {
             case 0:
-                value = IOPIN_PIN.A0;
+                value = PIN.A0;
                 break;
             case 1:
-                value = IOPIN_PIN.A1;
+                value = PIN.A1;
                 break;
             case 2:
-                value = IOPIN_PIN.A2;
+                value = PIN.A2;
                 break;
             case 3:
-                value = IOPIN_PIN.A3;
+                value = PIN.A3;
                 break;
             case 4:
-                value = IOPIN_PIN.A4;
+                value = PIN.A4;
                 break;
             case 5:
-                value = IOPIN_PIN.A5;
+                value = PIN.A5;
                 break;
             case 6:
-                value = IOPIN_PIN.D6;
+                value = PIN.D6;
                 break;
             case 7:
-                value = IOPIN_PIN.D7;
+                value = PIN.D7;
                 break;
         }
         return value;
     }
 
-    public static short GetDigitalValue(IOPIN_DIGITAL_VALUE value){
-        return (short) (value == IOPIN_DIGITAL_VALUE.HIGH ? 1 : 0);
+    public static short GetDigitalValue(DIGITAL_VALUE value){
+        return (short) (value == DIGITAL_VALUE.HIGH ? 1 : 0);
     }
 }

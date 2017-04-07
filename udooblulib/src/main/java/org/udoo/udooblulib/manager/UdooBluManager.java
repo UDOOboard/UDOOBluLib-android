@@ -522,18 +522,18 @@ public class UdooBluManager {
         });
     }
 
-    public void configAnalog(final String address, final IOPin.IOPIN_PIN pin, final OnBluOperationResult<Boolean> operationResult) {
+    public void configAnalog(final String address, final IOPin.PIN pin, final OnBluOperationResult<Boolean> operationResult) {
         if (isBluManagerReady) {
 //            addOperation(new Callable<Void>() {
 //                @Override
 //                public Void call() throws Exception {
-//                    final IOPin ioPin = IOPin.Builder(pin, IOPin.IOPIN_MODE.ANALOG);
+//                    final IOPin ioPin = IOPin.Builder(pin, IOPin.IOPIN_MODE.ANALOG_INPUT);
 //                    if (iOPinVerifier(ioPin)) {
 //                        if (indexAnalogConfig == ioPin.getIndexValue()) {
 //                            if (operationResult != null)
 //                                operationResult.onSuccess(true);
 //                        } else {
-//                            setPinAnalogOrPwmIndex(address, IOPin.Builder(pin, IOPin.IOPIN_INDEX_VALUE.ANALOG), new OnBluOperationResult<Boolean>() {
+//                            setPinAnalogOrPwmIndex(address, IOPin.Builder(pin, IOPin.IOPIN_INDEX_VALUE.ANALOG_INPUT), new OnBluOperationResult<Boolean>() {
 //                                @Override
 //                                public void onSuccess(Boolean aBoolean) {
 //                                    if (aBoolean) {
@@ -554,12 +554,12 @@ public class UdooBluManager {
 //                            });
 //                        }
 //                    } else {
-//                        iOPinModeBuilder(IOPin.IOPIN_MODE.ANALOG, ioPin);
+//                        iOPinModeBuilder(IOPin.IOPIN_MODE.ANALOG_INPUT, ioPin);
 //                        setIoPinMode(address, new OnBluOperationResult<Boolean>() {
 //                            @Override
 //                            public void onSuccess(Boolean aBoolean) {
 //                                if (aBoolean) {
-////                                    setLocaliOPinConfig(IOPin.IOPIN_MODE.ANALOG, ioPin);
+////                                    setLocaliOPinConfig(IOPin.IOPIN_MODE.ANALOG_INPUT, ioPin);
 //                                    configAnalog(address, pin, operationResult);
 //                                } else if (operationResult != null) {
 //                                    operationResult.onError(new UdooBluException(UdooBluException.BLU_WRITE_CHARAC_ERROR));
@@ -906,7 +906,7 @@ public class UdooBluManager {
         });
     }
 
-    public void subscribeNotificationAnalog(final String address, final IOPin.IOPIN_PIN pin, final INotificationListener<byte[]> notificationListener, final int period) {
+    public void subscribeNotificationAnalog(final String address, final IOPin.PIN pin, final INotificationListener<byte[]> notificationListener, final int period) {
         configAnalog(address, pin, new OnBluOperationResult<Boolean>() {
             @Override
             public void onSuccess(Boolean aBoolean) {
@@ -944,7 +944,7 @@ public class UdooBluManager {
 
     }
 
-    public void subscribeNotificationAnalog(final String address, IOPin.IOPIN_PIN pin, final INotificationListener<byte[]> notificationListener) {
+    public void subscribeNotificationAnalog(final String address, IOPin.PIN pin, final INotificationListener<byte[]> notificationListener) {
         subscribeNotificationAnalog(address, pin, notificationListener, Constant.NOTIFICATIONS_PERIOD);
     }
 
@@ -965,7 +965,7 @@ public class UdooBluManager {
     }
 
 
-    public boolean pwmWrite(IOPin.IOPIN_PIN pin, int freq, int dutyCycle) {
+    public boolean pwmWrite(IOPin.PIN pin, int freq, int dutyCycle) {
         return false;
     }
 

@@ -3,7 +3,6 @@ package org.udoo.udooblulib.activity;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.UiModeManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -12,7 +11,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -27,6 +25,7 @@ import org.udoo.udooblulib.exceptions.UdooBluException;
 import org.udoo.udooblulib.interfaces.IBleDeviceListener;
 import org.udoo.udooblulib.interfaces.IBluManagerCallback;
 import org.udoo.udooblulib.manager.UdooBluManager;
+import org.udoo.udooblulib.model.IOPin;
 import org.udoo.udooblulib.scan.BluScanCallBack;
 
 /**
@@ -43,6 +42,8 @@ public abstract class UdooBluAppCompatActivity extends AppCompatActivity {
     private final String TAG = "UdooBluAct";
     private UdooBluManager mUdooBluManager;
     private boolean mScan;
+    public static final int HIGH = IOPin.DIGITAL_VALUE.HIGH.ordinal();
+    public static final int LOW = IOPin.DIGITAL_VALUE.LOW.ordinal();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
