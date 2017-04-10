@@ -1010,15 +1010,20 @@ public class UdooBluManager {
                         detectSensors(address, new IReaderListener<byte[]>() {
                             @Override
                             public void oRead(byte[] value) {
-                                IBleDeviceListener iBleDeviceListener = mDeviceListenerMap.get(address);
+                                final IBleDeviceListener iBleDeviceListener = mDeviceListenerMap.get(address);
                                 boolean[] sensorsDetected = new boolean[8];
                                 for (int i = 0; i < sensorsDetected.length; i++) {
                                     sensorsDetected[i] = (value[0] & (1 << i)) > 0;
                                 }
                                 if (iBleDeviceListener != null){
-                                    UdooBlu udooBlu = new UdooBlu(address, sensorsDetected, mUdooBluManager);
+                                    final UdooBlu udooBlu = new UdooBlu(address, sensorsDetected, mUdooBluManager);
                                     mUdooBluConnected.put(address, udooBlu);
-                                    iBleDeviceListener.onDeviceConnected(udooBlu);
+                                    new Handler().postDelayed(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            iBleDeviceListener.onDeviceConnected(udooBlu);
+                                        }
+                                    }, 1000);
                                 }
                             }
 

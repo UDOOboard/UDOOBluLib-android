@@ -166,6 +166,7 @@ public abstract class UdooBluAppCompatActivity extends AppCompatActivity {
     public void startScan(){
         if (mScan) {
             mUdooBluManager.scanLeDevice(false, scanCallback);
+            mScan = false;
         }else{
             mUdooBluManager.scanLeDevice(true, scanCallback);
             mScan = true;
@@ -175,6 +176,7 @@ public abstract class UdooBluAppCompatActivity extends AppCompatActivity {
     public void stopScan(){
         if (mScan) {
             mUdooBluManager.scanLeDevice(false, scanCallback);
+            mScan = false;
         }
     }
 
