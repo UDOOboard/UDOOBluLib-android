@@ -40,6 +40,7 @@ import org.udoo.udooblulib.scan.BluScanCallBack;
 import org.udoo.udooblulib.sensor.UDOOBLE;
 import org.udoo.udooblulib.utils.SeqObserverQueue;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -74,7 +75,7 @@ public class UdooBluService extends Service {
     private BluetoothAdapter mBtAdapter = null;
     private static final long SCAN_PERIOD = 20000;
 
-     // Write/read pending response
+    // Write/read pending response
     private HashMap<String, BluetoothGatt> mBluetoothGatts;
     private BlockingQueue<Callable> voidBlockingQueue = new LinkedBlockingQueue<>(10);
     private SeqObserverQueue seqObserverQueue = new SeqObserverQueue<>(voidBlockingQueue);
@@ -273,7 +274,7 @@ public class UdooBluService extends Service {
      *
      * @param characteristic The characteristic to read from.
      */
-    public void readCharacteristic(final String mac, final BluetoothGattCharacteristic characteristic){
+    public void readCharacteristic(final String mac, final BluetoothGattCharacteristic characteristic) {
         try {
             voidBlockingQueue.put(new Callable<Boolean>() {
                 @Override
@@ -288,8 +289,8 @@ public class UdooBluService extends Service {
             });
 
         } catch (InterruptedException e) {
-            if(BuildConfig.DEBUG)
-                Log.e(TAG, "readCharacteristic: " +e.getMessage());
+            if (BuildConfig.DEBUG)
+                Log.e(TAG, "readCharacteristic: " + e.getMessage());
         }
     }
 
@@ -300,13 +301,13 @@ public class UdooBluService extends Service {
                 public Boolean call() throws Exception {
                     boolean result = false;
                     BluetoothGatt bluetoothGatt = checkAndGetGattItem(address);
-                        if (bluetoothGatt != null) {
-                            characteristic.setValue(b);
-                            result = bluetoothGatt.writeCharacteristic(characteristic);
-                            if (!result) {
-                                broadcastUpdate(ACTION_DATA_WRITE, address, characteristic, BluetoothGatt.GATT_WRITE_NOT_PERMITTED);
-                            }
+                    if (bluetoothGatt != null) {
+                        characteristic.setValue(b);
+                        result = bluetoothGatt.writeCharacteristic(characteristic);
+                        if (!result) {
+                            broadcastUpdate(ACTION_DATA_WRITE, address, characteristic, BluetoothGatt.GATT_WRITE_NOT_PERMITTED);
                         }
+                    }
                     return result;
                 }
             });
@@ -379,7 +380,7 @@ public class UdooBluService extends Service {
      * @param characteristic Characteristic to act on.
      * @param enable         If true, enable notification. False otherwise.
      */
-    public void setCharacteristicNotification(final String address,final BluetoothGattCharacteristic characteristic,final boolean enable) {
+    public void setCharacteristicNotification(final String address, final BluetoothGattCharacteristic characteristic, final boolean enable) {
         try {
             voidBlockingQueue.put(new Callable<Boolean>() {
                 @Override
@@ -425,7 +426,7 @@ public class UdooBluService extends Service {
 
     public void scanLeDevice(final boolean enable, final BluScanCallBack scanCallback) {
         List<ScanFilter> scanFilters = new ArrayList<>();
-        ScanFilter scanFilter =new ScanFilter.Builder().setServiceUuid(new ParcelUuid(UDOOBLE.UUID_SENSORS_SERV)).build();
+        ScanFilter scanFilter = new ScanFilter.Builder().setServiceUuid(new ParcelUuid(UDOOBLE.UUID_SENSORS_SERV)).build();
         scanFilters.add(scanFilter);
 
         ScanSettings scanSettings = new ScanSettings.Builder()
@@ -438,7 +439,7 @@ public class UdooBluService extends Service {
                 scanCallback.onError(udooBluException);
         } else {
             mLEScanner = mBtAdapter.getBluetoothLeScanner();
-            if (enable && mScanning.compareAndSet(false, true)){
+            if (enable && mScanning.compareAndSet(false, true)) {
                 mLEScanner.startScan(scanFilters, scanSettings, scanCallback);
                 Handler handler = new Handler();
                 handler.postDelayed(new Runnable() {
@@ -600,7 +601,7 @@ public class UdooBluService extends Service {
             }
 
             @Override
-            public void onCharacteristicRead(BluetoothGatt gatt,  BluetoothGattCharacteristic characteristic, int status) {
+            public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
                 broadcastUpdate(ACTION_DATA_READ, gatt.getDevice().getAddress(), characteristic, status);
             }
 
@@ -622,7 +623,7 @@ public class UdooBluService extends Service {
 
     }
 
-    public UdooBluException checkBluetooth(final Context context){
+    public UdooBluException checkBluetooth(final Context context) {
         UdooBluException udooBluException = null;
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             udooBluException = new UdooBluException(UdooBluException.BLUETOOTH_LE_NOT_SUPPORTED);
@@ -661,14 +662,34 @@ public class UdooBluService extends Service {
     }
 
     private boolean isPermissionGranted(String permission, Context context) {
-        return  ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED;
+        return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED;
     }
 
     public boolean requestConnectionPriority(String address, int connectionPriority) {
         boolean result = false;
         BluetoothGatt bluetoothGatt = checkAndGetGattItem(address);
-        if(bluetoothGatt != null){
+        if (bluetoothGatt != null) {
             result = bluetoothGatt.requestConnectionPriority(connectionPriority);
+        }
+        return result;
+    }
+
+    public boolean unpair(String address) {
+        Set<BluetoothDevice> bluetoothDevices = mBtAdapter.getBondedDevices();
+        boolean result = false;
+        BluetoothDevice bluetoothDevice = null;
+        for (BluetoothDevice tmpBluetoothDevice : bluetoothDevices) {
+            if (tmpBluetoothDevice.getAddress().equals(address))
+                bluetoothDevice = tmpBluetoothDevice;
+        }
+        if (bluetoothDevice != null) {
+            try {
+                Method removeBondMethod = bluetoothDevice.getClass().getMethod("removeBond", (Class[]) null);
+                Object value = removeBondMethod.invoke(bluetoothDevice, (Object[]) null);
+                if (value instanceof Boolean) {
+                    result = (boolean) value;
+                }
+            } catch (Exception e) {}
         }
         return result;
     }
